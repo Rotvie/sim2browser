@@ -214,3 +214,11 @@ policy actions 2.8e-7 (1e-5; float32 weights).
   arm stays visible above it), open the info panel and check the measured results.
 - [ ] 5-visitor test for SC-006 / SC-007 (T081), after the public deploy.
 - [ ] Public deploy once a remote exists (gate 4).
+
+## CI note (2026-09-26)
+
+GitHub-hosted runners have no GPU and few cores, so the SC-001 (load time) and SC-002 (fps)
+assertions run in record-only mode when `CI` is set: the numbers are attached to the test
+report but do not block deploy. All functional e2e checks, parity, unit tests, evaluation and
+the size budget still gate the deploy. SC-001/SC-002 are verified locally (numbers above) and on
+a real phone (manual checks).

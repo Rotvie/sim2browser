@@ -197,3 +197,8 @@ that records measurements, failures and decisions.
   (Apache-2.0); modifications listed in [`shared/robot/README.md`](shared/robot/README.md).
 - [three.js](https://threejs.org) (MIT), [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) (MIT),
   [Gymnasium](https://gymnasium.farama.org) (MIT).
+
+## License
+
+[MIT](LICENSE) for this project's code. The robot model and meshes in `shared/robot/` keep their
+Apache-2.0 license ([`shared/robot/LICENSE`](shared/robot/LICENSE)).
