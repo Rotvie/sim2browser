@@ -80,9 +80,12 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     const pt = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
     await page.mouse.move(pt[0], pt[1]);
     await page.mouse.down();
+    // The panel refreshes once per rendered frame; slow CI runners (no GPU) render slower than the
+    // 40 ms sampling, so keep dragging until 8 distinct states are seen rather than sampling a
+    // fixed 10 times. The move cap still fails a panel that stops updating.
     const seen = new Set<string>();
-    for (let i = 0; i < 10; i++) {
-      await page.mouse.move(pt[0] + i * 8, pt[1] + i * 4);
+    for (let i = 0; i < 40 && seen.size < 8; i++) {
+      await page.mouse.move(pt[0] + (i % 20) * 8, pt[1] + (i % 20) * 4);
       await page.waitForTimeout(40);
       seen.add(await panel.innerText());
     }

@@ -232,6 +232,10 @@ local and real-device runs keep 5 cm. (3) A third run failed the snapshot-gap ch
 that slow. Root cause for all three: the 4× CPU throttle stacked on an already slow runner.
 The mobile-chromium throttle is now applied on development machines only (where it is
 calibrated); in CI that project checks viewport, touch and layout.
+(4) Later, mobile-webkit (never throttled) failed the policy-view check with 6 distinct panel
+states against 8: the test sampled a fixed 10 times at 40 ms, but the panel refreshes once per
+rendered frame and frames on the GPU-less runner were slower than 40 ms. The test now drags until
+it sees 8 distinct states (at most 40 moves), so it checks live updates, not frame rate.
 
 ## Public deploy (2026-09-26): https://rotvie.github.io/sim2browser/
 
