@@ -1,44 +1,39 @@
-# Contract: parity fixture (`shared/parity/*.json`)
+# Contract: parity fixtures (`shared/parity/*.json`)
 
-Written by `train/make_fixtures.py` (Python MuJoCo, reference); replayed by
-`web/tests/parity/*.test.ts` (WASM MuJoCo in Node). Enforces Principle II / FR-015.
+Written by `training/reach/make_fixtures.py` (Python MuJoCo is the reference). Replayed by
+`tests/parity/*.test.ts` (WASM MuJoCo under Node). Enforces Principle II / FR-015. CI blocks deploy
+on any failure.
 
 ```json
 {
   "fixtureVersion": 1,
-  "envSpecSha256": "<hex>",
+  "parityJsonSha256": "<hex>",
   "modelSha256": "<hex>",
   "mujocoVersion": "3.14.0",
-  "kind": "open-loop" | "closed-loop-policy",
+  "kind": "trajectory" | "policy",
   "init": { "qpos": [...], "qvel": [...], "ctrl": [...], "target": [x, y, z] },
   "targetChanges": [ { "step": 120, "target": [x, y, z] } ],
   "steps": [
-    {
-      "action": [7],          // open-loop: given; closed-loop: the Python policy's output
-      "obsRaw": [31],
-      "obsNorm": [31],
-      "qpos": [...], "qvel": [...], "tip": [3]
-    }
+    { "action": [5], "obsRaw": [21], "obsNorm": [21], "policyAction": [5],
+      "qpos": [...], "qvel": [...] }
   ]
 }
 ```
 
-## Fixture set (minimum)
+## Fixtures
 
-1. `open-loop-random.json`: 500 steps of seeded random actions (tests engine plus action
-   application).
-2. `open-loop-limits.json`: actions saturated against joint limits.
-3. `closed-loop-policy.json`: 500 steps where the policy drives the arm, including 3 target
-   changes and one unreachable target (tests observation builder, normalization, MLP).
+1. `trajectory-random.json`: 500 control steps of a fixed, seeded random action sequence.
+2. `trajectory-limits.json`: actions saturated against joint limits.
+3. `policy-recorded.json`: observations recorded while the trained policy runs (3 target changes,
+   one unreachable), with the training policy's actions.
 
-## Assertions (TS side)
+## Assertions
 
-| Quantity | Tolerance (max abs) |
-|----------|---------------------|
-| `qpos`, `qvel`, `tip` | 1e-9 open-loop; 1e-6 closed-loop |
-| `obsRaw`, `obsNorm` | 1e-6 |
-| policy `action` (TS MLP on Python's `obsNorm`) | 1e-5 |
-| env-spec / model / MuJoCo version | exact match |
+| Check | Tolerance |
+|-------|-----------|
+| Replay `action` sequence → `qpos`, `qvel` at every step (trajectory fixtures) | ≤ **1e-6** max abs |
+| TS observation builder → `obsRaw`, `obsNorm` from the replayed state | ≤ 1e-6 |
+| TS MLP on recorded `obsNorm` → `policyAction` | ≤ **1e-5** |
+| MuJoCo version, model hash, `parity.json` hash | exact |
 
-In closed-loop mode, the TS side runs its own policy on its own observations. A drift beyond the
-tolerance at any step fails the test and reports the first step and field that diverged.
+A failure reports the first step and field that diverged.

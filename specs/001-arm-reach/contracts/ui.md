@@ -14,6 +14,7 @@ One page (`index.html`), no routes. Covers FR-001–FR-017.
 | Mode switch | segmented control: `Manual` · `Baseline` · `Learned` | same | P2 (Learned from P3) |
 | Reset | button | button | P1 |
 | Observe/output panel | toggle button, collapsed by default | same, becomes a bottom sheet | P3 |
+| Info panel | "i" button | same | P2 (baseline design), P3 (policy + metrics) |
 
 ## Visible states
 
@@ -27,17 +28,25 @@ One page (`index.html`), no routes. Covers FR-001–FR-017.
 - **Errors**: plain-language message plus a Retry button for asset failures; a "your browser
   lacks WebAssembly/WebGL" message for unsupported browsers.
 
-## Panel content (P3)
+## Observe/output panel (P3)
 
-- Observation groups with labels from `env-spec.json` (joint angles as small bars, tip/target as
-  numbers, flag as badge), raw values, and normalized values on hover or tap.
-- Output: 7 bars from −1 to +1 labeled "joint 1..7 command".
-- Footer names both controllers: "Learned: PPO policy, 2×128 MLP" and "Baseline: damped
-  least-squares IK" (R6 honesty note).
+- Observation groups with labels from `parity.json` (joint angles as small bars, target and
+  tip → target as numbers, previous command as bars), raw values, and normalized values on hover
+  or tap.
+- Output: 5 bars from −1 to +1 labeled "joint 1..5 command".
 - When the mode is not Learned, the panel keeps showing live observations and shows the
   policy's outputs greyed out.
 
+## Info panel (P2 onward)
+
+- **Baseline design**: damped-least-squares IK on tip position, gains, damping, and joint speed
+  limit (read from `parity.json`); "tracks the target directly, no trajectory planning"; the caveat
+  that a trajectory planner would also be smooth (research R6).
+- **Learned policy** (P3): PPO, 2×128 MLP, what it observes, reward terms (distance, success bonus,
+  action-rate and jerk penalties).
+- **Measured results** (P3): success rate and jerk ratio vs. baseline from `reach.json` `metrics`,
+  shown as-is even when below target (research R12).
+
 ## Test hooks
 
-`window.__webRobot` (present in all builds, read-only): `{ mode, q, target, reachable, fps,
-lastPolicyStep }`. Playwright tests use it. It is not a public API.
+`window.__webRobot` (present in all builds, read-only): the latest worker snapshot plus `fps`. Playwright tests use it. It is not a public API.

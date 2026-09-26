@@ -22,10 +22,11 @@ __pycache__/
 *.egg-info/
 
 # Training outputs (exported artifacts live in shared/, which is tracked)
-train/runs/
-train/checkpoints/
-train/logs/
+training/runs/
+training/checkpoints/
+training/logs/
 *.zip
+*.pkl
 
 # Env
 .env

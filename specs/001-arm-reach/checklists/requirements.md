@@ -33,6 +33,6 @@
 
 - Demo thesis resolved 2026-09-25: motion quality (option A). FR-016, FR-018, SC-007, SC-009
   updated/added.
-- SC-004 success-rate floor (90%) is a proposal; final threshold is committed in the plan, per
+- SC-004 success-rate floor set to 95% in the plan (research R12); SC-009 margin 30%. Per
   user input.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`

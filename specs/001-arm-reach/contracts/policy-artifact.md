@@ -1,39 +1,46 @@
 # Contract: policy artifact (`shared/policy/reach.json` + `reach.bin`)
 
+Written by `training/reach/export.py` from the trained SB3 policy.
+
 ## Header `reach.json`
 
 ```json
 {
   "format": 1,
-  "envSpecVersion": 1,
+  "parityVersion": 1,
   "activation": "tanh",
-  "outputActivation": "tanh",
+  "outputActivation": "clip",
   "layers": [
-    { "in": 31,  "out": 128 },
+    { "in": 21,  "out": 128 },
     { "in": 128, "out": 128 },
-    { "in": 128, "out": 7 }
+    { "in": 128, "out": 5 }
   ],
   "dtype": "float32-le",
   "sha256": "<hex of reach.bin>",
-  "trainedWith": { "algo": "PPO", "steps": 0, "seed": 0, "gitRev": "<rev>" }
+  "trainedWith": { "algo": "PPO", "steps": 0, "seed": 0, "gitRev": "<rev>" },
+  "metrics": { "successRate": 0.0, "jerkRatioVsBaseline": 0.0 }
 }
 ```
+
+`metrics` is filled in from the Node evaluation after export. The info panel shows it
+(honest reporting, research R12).
 
 ## Binary `reach.bin`
 
 For each layer in order: `W` (row-major, `out × in`), then `b` (`out`), as little-endian float32.
-Total size = Σ(out·in + out)·4 bytes (≈ 86 KB).
+Total ≈ 20k parameters ≈ 80 KB.
 
-## Forward pass (both sides MUST agree)
+## Forward pass (both sides MUST agree within 1e-5)
 
 ```
 h = obsNorm
 for each hidden layer: h = tanh(W·h + b)
-action = tanh(W_last·h + b_last)        # deterministic mean action, no sampling
+action = clip(W_last·h + b_last, -1, 1)  # SB3 PPO deterministic mean (linear), clipped to bounds
 ```
 
 ## Rules
 
-- The browser uses only the deterministic mean action (no exploration noise).
-- The loader MUST check `envSpecVersion`, the byte length, and `sha256` before use; on mismatch,
-  Learned mode is disabled and an error is shown (see data-model ControlMode).
+- The browser uses only the deterministic mean action.
+- The loader checks `parityVersion`, the byte length, and `sha256`; on mismatch, Learned mode is
+  disabled and an error is shown.
+- There is no ONNX export: the browser runs this format directly (research R7).

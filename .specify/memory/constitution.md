@@ -83,10 +83,16 @@ shippable.
 - Every implementation plan MUST include a Constitution Check covering all five principles and
   explicitly justify any deviation in its complexity tracking.
 - Release gates for each rung:
-  1. Parity tests pass (Principle II).
-  2. Baseline controller present and switchable in the demo (Principle IV).
-  3. Demo builds to static assets and runs with no backend (Principle I).
-  4. Demo deployed to a public URL (Principle III).
+  1. Parity tests pass (Principle II). Required for every rung that ships a learned behavior,
+     and for every later rung.
+  2. Baseline controller present and switchable in the demo (Principle IV). Required for every
+     rung that ships a learned behavior, and for every later rung.
+  3. Demo builds to static assets and runs with no backend, verified by an automated check
+     (Principle I). Required for every rung.
+  4. Demo deployed to a public URL (Principle III). Required for every rung.
+- Rungs that ship no learned behavior (e.g. a scene or a classical controller only) are bound by
+  gates 3 and 4; they MUST NOT introduce parity-critical values outside the single source of
+  truth, so gates 1 and 2 hold as soon as a learned behavior arrives.
 - Reviews MUST reject changes that add scope without justification (Principle V).
 
 ## Governance
@@ -102,4 +108,4 @@ shippable.
 - Compliance review: every `/speckit-plan` Constitution Check and every code review MUST verify
   adherence; `/speckit-analyze` findings that contradict the constitution are treated as blocking.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-25
+**Version**: 1.0.1 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-25

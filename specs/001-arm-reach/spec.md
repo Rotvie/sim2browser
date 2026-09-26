@@ -193,8 +193,7 @@ switch controllers mid-reach; open the panel and watch values change as the targ
 - **SC-003**: With the baseline active, for 100 random reachable targets, the tip settles on the
   target in at least 99% of trials within 2 seconds of the target being released.
 - **SC-004**: With the learned policy active, the tip reaches reachable targets at a success rate
-  of at least the threshold committed in the plan (proposed floor: 90% over the same 100 targets
-  and same settle definition as SC-003).
+  of at least 95% over the same 100 targets, with the same settle definition as SC-003.
 - **SC-005**: Zero crashes, freezes, or visibly broken arm poses across a 10-minute scripted
   session of random dragging, including unreachable targets and rapid controller switching.
 - **SC-006**: In informal testing with at least 5 first-time visitors without robotics background,
@@ -219,7 +218,7 @@ switch controllers mid-reach; open the panel and watch values change as the targ
 - Grabbing a joint while a controller is active switches to Manual mode.
 - The learned policy is trained offline, outside the browser; training tooling is not part of the
   shipped demo.
-- Robot model choice (which arm, how many joints) is decided in the plan.
+- The task is tip position only (no orientation); robot model choice is made in the plan.
 - The target is the only movable object; no obstacles in this feature.
 
 ## Out of Scope

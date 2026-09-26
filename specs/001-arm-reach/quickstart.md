@@ -1,78 +1,76 @@
 # Quickstart & Validation: Arm Reach
 
-How to prove each release rung works. Contracts: [env-spec](./contracts/env-spec.md),
-[policy](./contracts/policy-artifact.md), [parity](./contracts/parity-fixture.md),
-[ui](./contracts/ui.md). Thresholds: [research R11](./research.md#r11-committed-thresholds-spec-asked-the-plan-to-fix-these).
+How to prove each rung works. Contracts: [parity.json](./contracts/parity-json.md),
+[policy](./contracts/policy-artifact.md), [fixtures](./contracts/parity-fixture.md),
+[worker](./contracts/worker-protocol.md), [ui](./contracts/ui.md).
+Thresholds: [research R12](./research.md#r12-committed-thresholds).
 
 ## Prerequisites
 
 - Node.js 22 LTS, npm
-- Python 3.12, `uv` (or pip + venv)
+- Python 3.12, `uv`
 - Playwright browsers: `npx playwright install chromium webkit`
 
 ## Setup
 
 ```bash
 cd web && npm ci
-cd ../train && uv sync
+cd ../training && uv sync
+uv run python -m reach.export --no-policy   # writes shared/parity.json (no training needed)
 ```
 
-## Rung P1 — See and pose the arm
+## Rung P1 — See and pose the arm (web only)
 
 ```bash
 cd web
-npm run dev                    # open http://localhost:5173
-npm test                       # unit tests
-npm run test:e2e -- --grep @p1 # load time, posing, joint limits, fps (desktop + mobile emulation)
-npm run build && npm run size  # checks the load budget (≤ 4 MB compressed before interactive)
+npm run dev                         # http://localhost:5173
+npm test                            # unit
+npm run test:e2e -- --grep @p1      # load time, posing, joint limits, fps; desktop + mobile emulation
+npm run build && npm run size       # ≤ 4 MB compressed before interactive
 ```
 
-Expected: arm visible and interactive in ≤ 3 s (throttled-4G profile); dragging past a limit
-holds the joint at its limit; fps ≥ 30 with no frame gap > 100 ms.
+Expected: arm interactive in ≤ 3 s (throttled-4G profile); dragging past a limit holds the joint;
+≥ 30 fps, no frame gap > 100 ms. Manual check: deployed URL on a real phone.
 
-Manual check: open the deployed URL on a real phone; orbit, pinch-zoom, pose each joint.
-
-## Rung P2 — Baseline reaches the target
+## Rung P2 — Baseline reaches the target (web only)
 
 ```bash
 cd web
-npm run eval -- --controller baseline --n 100 --seed 0   # prints EvalReport JSON
+npm run eval -- --controller baseline --n 100 --seed 0
 npm run test:e2e -- --grep @p2
 ```
 
-Expected: `successRate ≥ 0.99`, settle within 2.0 s at 1 cm; e2e shows an unreachable target
-marked and the arm stopped at its limit without oscillating; a continuous drag is followed without
-stalls.
+Expected: `successRate ≥ 0.99` (1 cm, 2 s); an unreachable target is marked and the arm stops at
+its limit without oscillating; continuous drags are followed without stalls; the info panel shows
+the baseline design.
 
 ## Rung P3 — Learned policy vs. baseline
 
 ```bash
-cd train
-uv run python -m reach.train --seed 0            # CPU; writes checkpoints
-uv run python -m reach.export                    # writes shared/env-spec.json stats + shared/policy/*
-uv run python -m reach.make_fixtures             # writes shared/parity/*.json
+cd training
+uv run python -m reach.train --seed 0     # CPU PPO
+uv run python -m reach.export             # parity.json (with normalization) + shared/policy/*
+uv run python -m reach.make_fixtures      # shared/parity/*.json
 uv run pytest
 
-cd ../web
-npm run test:parity                              # MUST pass (release gate 1)
-npm run eval -- --controller learned  --n 100 --seed 0
+cd ..
+npx vitest run tests/parity               # release gate: trajectories ≤ 1e-6, policy ≤ 1e-5
+cd web
 npm run eval -- --controller baseline --n 100 --seed 0
-npm run eval:compare                             # SC-004 + SC-009 verdict
+npm run eval -- --controller learned  --n 100 --seed 0
+npm run eval:compare -- --write-metrics   # SC-004 + SC-009 verdict; writes metrics into reach.json
 npm run test:e2e -- --grep @p3
-npm run test:e2e -- --grep @soak                 # 10-minute random-drag soak (SC-005)
+npm run test:e2e -- --grep @soak          # 10-minute soak (SC-005)
 ```
 
-Expected: parity passes; learned `successRate ≥ 0.90`; learned `meanSqTipJerk ≤ 0.5 ×` baseline;
-switching mode mid-reach keeps pose and target; panel values change every frame while moving;
-no requests other than static assets (SC-008).
+Expected: parity passes; learned `successRate ≥ 0.95`; jerk ratio ≤ 0.70; a mid-reach switch keeps
+pose and target; the panel updates live; the info panel shows the measured metrics. If the
+thresholds are missed, the metrics are still shown as measured and the shortfall is recorded in
+`validation.md`. Never weaken the baseline.
 
 ## Release (every rung)
 
-```bash
-cd web && npm run build && npm run preview   # final smoke check on the production build
-# push to main → CI runs unit, parity, eval, e2e → deploys web/dist to GitHub Pages
-```
-
-A rung is done when the public URL is live and all four constitution release gates are green.
-Then run the informal 5-visitor test for SC-006 and SC-007 and record the results in
-`specs/001-arm-reach/validation.md`.
+Push to `main` → GitHub Actions runs unit, parity, eval, and e2e → deploys `web/dist` to GitHub
+Pages. Deployment is blocked if parity fails. A rung is done when the public URL is live and all
+constitution release gates are green. Then run the 5-visitor test (SC-006/SC-007) and record the
+results in `specs/001-arm-reach/validation.md`.
