@@ -187,6 +187,8 @@ that records measurements, failures and decisions.
 
 ## Where this could go
 
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for status, open items and the plan toward manipulation.
+
 - Recover from shoves: push the arm and watch each controller recover (next feature).
 - Sensor noise, latency and dropout as live knobs, to see controllers degrade.
 - More MuJoCo sensors (force/torque, touch) and more robots from Menagerie.
