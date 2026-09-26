@@ -1,5 +1,6 @@
 /** The interactive app: rendering, input and UI. Loaded after the sim worker has started. */
 import * as THREE from "three";
+import { MANUAL } from "./control/modes";
 import type { FromWorker, ReadyInfo, Snapshot, ToWorker } from "./protocol";
 import { createArmView } from "./render/arm";
 import { PoseInterpolator } from "./render/interp";
@@ -61,6 +62,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   let target: TargetView | null = null;
   let modeSwitch: ModeSwitch | null = null;
   let observe: ObservePanel | null = null;
+  /** Modes the worker has run at least once (already created: no loading spinner). */
+  const used = new Set<string>();
 
   const bodyIndex = (name: string) => ready?.bodyNames.indexOf(name) ?? -1;
   const bodyPos = (b: number): THREE.Vector3 | null =>
@@ -111,13 +114,19 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           send: (joint, angle) => send({ type: "dragJoint", joint, angle }),
           onInteract: () => hint.dismiss(),
         });
-        modeSwitch = createModeSwitch(toolbar, msg.modes, (mode) => {
-          if (mode === "learned" && latest?.mode !== "learned" && !latest?.policyStep) {
-            modeSwitch?.learnedState("loading");
-          }
-          send({ type: "setMode", mode });
-        });
-        const hasPolicy = msg.modes.includes("learned");
+        // Public controllers always; lab controllers (registry `public: false`) with ?lab.
+        const lab = new URLSearchParams(location.search).has("lab");
+        const shown = msg.controllers.filter((c) => c.public || lab);
+        modeSwitch = createModeSwitch(
+          toolbar,
+          [{ id: MANUAL, label: "Manual" }, ...shown.map(({ id, label }) => ({ id, label }))],
+          (mode) => {
+            // Controllers are created on first use; show a spinner until the worker confirms.
+            if (mode !== latest?.mode && !used.has(mode)) modeSwitch?.setState(mode, "loading");
+            send({ type: "setMode", mode });
+          },
+        );
+        const hasPolicy = shown.some((c) => c.id === "learned");
         if (hasPolicy) observe = createObservePanel(app, toolbar, msg.observation, msg.joints);
         createInfoPanel(
           app,
@@ -125,22 +134,26 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           msg.baseline,
           msg.observation.map((f) => f.label),
           hasPolicy ? new URL("shared/policy/reach.json", document.baseURI).href : null,
+          shown.filter((c) => !c.public),
         );
         messages.hide();
         break;
       }
       case "snapshot":
         latest = msg;
+        used.add(msg.mode);
         modeSwitch?.show(msg.mode);
         interp.push({ pos: msg.bodyPos, quat: msg.bodyQuat }, performance.now());
         break;
       case "modeChanged":
         modeSwitch?.show(msg.mode);
         break;
-      case "policyError":
-        modeSwitch?.learnedState("failed", msg.message);
-        messages.toast("The learned policy could not be loaded, so the baseline stays in control.");
+      case "controllerError": {
+        modeSwitch?.setState(msg.id, "failed", msg.message);
+        const label = ready?.controllers.find((c) => c.id === msg.id)?.label ?? msg.id;
+        messages.toast(`${label} could not be loaded, so the baseline stays in control.`);
         break;
+      }
       case "error":
         messages.error(msg.message, () => {
           messages.loading("Loading the robot…");
@@ -166,7 +179,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
     const pose = interp.sample(now);
     if (arm && pose) arm.setPose(pose);
     target?.update();
-    if (latest) observe?.update(latest.policyStep, latest.mode);
+    if (latest) observe?.update(latest.policyStep, latest.policyStepActive);
     // On narrow screens the policy panel is a bottom sheet: keep the arm above it.
     const sheet = window.innerWidth < 700 ? observe?.openElement() : null;
     view.setBottomInset(sheet ? canvas.clientHeight - sheet.getBoundingClientRect().top : 0);

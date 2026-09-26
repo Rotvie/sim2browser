@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 /** Sim worker: a thin adapter between messages and the Session (contracts/worker-protocol.md). */
-import { loadPolicy } from "./control/policy";
 import type { FromWorker, ToWorker } from "./protocol";
 import { createSim, getMujoco } from "./sim/mujoco";
 import { loadShared, ParityError, type ReadBytes } from "./sim/parity";
@@ -11,7 +10,6 @@ declare const self: DedicatedWorkerGlobalScope;
 let session: Session | null = null;
 let timer: ReturnType<typeof setInterval> | undefined;
 let read: ReadBytes | null = null;
-let policyState: "none" | "loading" | "loaded" | "failed" = "none";
 
 const post = (msg: FromWorker, transfer: Transferable[] = []) => self.postMessage(msg, transfer);
 
@@ -24,19 +22,19 @@ function postSnapshot(s: Session) {
   post({ type: "snapshot", ...snap }, [snap.bodyPos.buffer, snap.bodyQuat.buffer]);
 }
 
-/** Load the policy on first use (it is not needed for the page to become interactive). */
-async function selectLearned(s: Session) {
-  if (policyState === "loaded") return postModeChange(s.setMode("learned"));
-  if (policyState !== "none" || !read) return;
-  policyState = "loading";
+/** Select a controller, creating it on first use (it may load assets, e.g. the policy). */
+async function selectController(s: Session, id: string) {
+  if (s.modes.available(id)) return postModeChange(s.setMode(id));
   try {
-    s.addPolicy(await loadPolicy(read, s.parity));
-    policyState = "loaded";
-    if (session === s) postModeChange(s.setMode("learned"));
+    await s.ensureController(id);
+    if (session === s) postModeChange(s.setMode(id));
   } catch (err) {
-    policyState = "failed";
-    post({ type: "policyError", message: err instanceof Error ? err.message : String(err) });
-    postModeChange(s.policyFailed());
+    post({
+      type: "controllerError",
+      id,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    postModeChange(s.controllerFailed(id));
   }
 }
 
@@ -46,7 +44,6 @@ async function init(baseUrl: string) {
     if (!res.ok) throw Object.assign(new Error(`${path}: HTTP ${res.status}`), { assetLoad: true });
     return new Uint8Array(await res.arrayBuffer());
   };
-  policyState = "none";
   try {
     // Download the engine and the robot files in parallel.
     const mjPromise = getMujoco();
@@ -59,7 +56,7 @@ async function init(baseUrl: string) {
     ]);
     const sim = createSim(mj, parity, modelFiles);
     session?.sim.dispose();
-    session = createSession(sim, parity, workspace);
+    session = createSession(sim, parity, workspace, { read: read! });
     post({
       type: "ready",
       joints: parity.joints,
@@ -72,8 +69,12 @@ async function init(baseUrl: string) {
       maxReach: parity.reach.maxReach,
       baseline: parity.baseline,
       observation: parity.observation.fields,
-      // Learned is offered when the build ships a policy; it loads on first selection.
-      modes: parity.policy ? ["manual", "baseline", "learned"] : ["manual", "baseline"],
+      controllers: session.controllers.map(({ id, label, description, public: pub }) => ({
+        id,
+        label,
+        description,
+        public: pub,
+      })),
     });
     postSnapshot(session);
     clearInterval(timer);
@@ -104,8 +105,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       session.setTarget(msg.pos);
       break;
     case "setMode":
-      if (msg.mode === "learned") void selectLearned(session);
-      else postModeChange(session.setMode(msg.mode));
+      void selectController(session, msg.mode);
       break;
     case "reset":
       session.reset();

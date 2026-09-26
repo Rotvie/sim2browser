@@ -4,13 +4,12 @@
  * narrow screens. In other modes it keeps showing what the policy would do, greyed out.
  */
 import type { PolicyStep } from "../control/learned";
-import type { ControlMode } from "../control/modes";
 import type { ObsField } from "../sim/parity";
 
 const fmt = (v: number) => (Math.abs(v) < 0.0005 ? "0.000" : v.toFixed(3));
 
 export interface ObservePanel {
-  update(step: PolicyStep | undefined, mode: ControlMode): void;
+  update(step: PolicyStep | undefined, active: boolean): void;
   /** The panel element, or null while it is closed. */
   openElement(): HTMLElement | null;
 }
@@ -113,14 +112,13 @@ export function createObservePanel(
 
   return {
     openElement: () => (panel.hidden ? null : panel),
-    update(step, mode) {
+    update(step, active) {
       if (panel.hidden) return;
       if (!step) {
         status.textContent = "Select Learned to load the policy.";
         panel.classList.add("inactive");
         return;
       }
-      const active = mode === "learned";
       panel.classList.toggle("inactive", !active);
       status.textContent = active
         ? "Live: what the policy observes and outputs every 20 ms."

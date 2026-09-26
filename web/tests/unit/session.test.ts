@@ -10,7 +10,7 @@ describe("session", () => {
     const q = sim.q();
     const qd = sim.qd();
     s.setMode("manual");
-    s.setMode("learned"); // unavailable until P3: ignored
+    s.setMode("learned"); // not created yet (created on first selection): ignored
     s.setMode("baseline");
     expect(Array.from(sim.q())).toEqual(Array.from(q));
     expect(Array.from(sim.qd())).toEqual(Array.from(qd));

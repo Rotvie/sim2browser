@@ -71,5 +71,6 @@ export function createLearnedController(opts: {
     },
     last: () => last,
     peek: evaluate,
+    inspect: (active) => (active ? last : null) ?? evaluate(),
   };
 }

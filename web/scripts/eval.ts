@@ -1,7 +1,8 @@
 /**
- * Headless controller evaluation on the shipped code path (SC-003, SC-004, SC-009).
+ * Headless controller evaluation on the shipped code path (SC-003, SC-004, SC-009). Works for any
+ * controller in web/src/control/registry.ts.
  *
- *   npm run eval -- --controller baseline --n 100 --seed 0 [--out path]
+ *   npm run eval -- --controller <id> --n 100 --seed 0 [--out path]
  *
  * Writes an EvalReport (data-model.md) to web/eval/<controller>.json and prints a summary.
  * Exits non-zero when the baseline misses SC-003 (successRate < 0.99).
@@ -9,8 +10,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { parseArgs } from "node:util";
-import type { ControlMode } from "../src/control/modes";
-import { loadPolicy } from "../src/control/policy";
 import { meanSqJerk, reachableTargets, runEpisode } from "../src/sim/eval";
 import { createSession } from "../src/sim/session";
 import { loadNodeSim, readShared } from "../tests/node-shared";
@@ -23,17 +22,18 @@ const { values } = parseArgs({
     out: { type: "string" },
   },
 });
-const controller = values.controller as ControlMode;
-if (controller !== "baseline" && controller !== "learned") {
-  throw new Error(`--controller must be baseline or learned, got ${controller}`);
-}
+const controller = values.controller!;
 const n = Number(values.n);
 const seed = Number(values.seed);
 const out = values.out ?? new URL(`../eval/${controller}.json`, import.meta.url).pathname;
 
 const { sim, parity, workspace } = await loadNodeSim();
-const session = createSession(sim, parity, workspace);
-if (controller === "learned") session.addPolicy(await loadPolicy(readShared, parity));
+const session = createSession(sim, parity, workspace, { read: readShared });
+if (!session.controllers.some((c) => c.id === controller)) {
+  const ids = session.controllers.map((c) => c.id).join(", ");
+  throw new Error(`unknown controller "${controller}" (available: ${ids})`);
+}
+await session.ensureController(controller);
 const targets = reachableTargets(sim, parity, n, seed);
 
 const perTarget = [];

@@ -105,7 +105,7 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
       await route.fulfill({ response: res, body });
     });
     await page.getByRole("button", { name: "Learned" }).click();
-    await expect(page.getByRole("alert")).toContainText("learned policy could not be loaded");
+    await expect(page.getByRole("alert")).toContainText("Learned could not be loaded");
     await expect(page.getByRole("button", { name: "Learned" })).toBeDisabled();
     expect(await mode(page)).toBe("baseline");
   });

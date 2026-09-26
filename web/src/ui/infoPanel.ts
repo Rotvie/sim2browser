@@ -11,6 +11,7 @@ export function createInfoPanel(
   baseline: Parity["baseline"],
   observed: string[],
   policyHeaderUrl: string | null,
+  labControllers: { label: string; description: string }[] = [],
 ): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -44,7 +45,16 @@ export function createInfoPanel(
       smoothly; this demo compares reactive controllers.</p>
     <p class="note">The arm works in front of its base. Targets it cannot reach are shown in orange;
       it stretches toward them and stops.</p>
-    <div class="learned-info" hidden></div>`;
+    <div class="learned-info" hidden></div>
+    ${
+      labControllers.length
+        ? `<h3>Lab controllers</h3>` +
+          labControllers
+            .map((c) => `<p><strong>${c.label}</strong>: ${c.description}</p>`)
+            .join("") +
+          `<p class="note">Add your own in <code>web/src/control/registry.ts</code>.</p>`
+        : ""
+    }`;
   root.appendChild(panel);
 
   // The learned-policy section loads its facts from the shipped policy header on first open, so

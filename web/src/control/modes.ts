@@ -1,30 +1,37 @@
 /**
  * Control-mode state machine (data-model.md ControlMode). A mode switch only changes which
  * controller writes ctrl; it never touches q, qd or the target (FR-012).
+ *
+ * Modes are controller ids: "manual" is built in; every other id comes from the controller
+ * registry (control/registry.ts).
  */
-export type ControlMode = "manual" | "baseline" | "learned";
+import type { PolicyStep } from "./learned";
 
-export type ModeChangeReason = "user" | "joint-grab" | "policy-load-failed";
+export type ControlMode = string;
+
+export type ModeChangeReason = "user" | "joint-grab" | "controller-failed";
 
 export interface Controller {
   /** Called when the controller becomes active. */
   enter(): void;
   /** One control step: write joint targets through the Arm. */
   step(): void;
+  /**
+   * Optional: what the controller observes and outputs, for the "Policy view" panel. `active`
+   * says whether it is the controller in charge right now.
+   */
+  inspect?(active: boolean): PolicyStep | null;
 }
+
+export const MANUAL = "manual";
 
 export class ModeMachine {
   private controllers = new Map<ControlMode, Controller>();
-  private current: ControlMode = "manual";
+  private current: ControlMode = MANUAL;
 
-  constructor(controllers: Partial<Record<ControlMode, Controller>>) {
-    for (const [mode, c] of Object.entries(controllers)) {
-      if (c) this.controllers.set(mode as ControlMode, c);
-    }
-    if (!this.controllers.has("manual")) throw new Error("manual controller is required");
-    // Initial mode: baseline once it exists (P2 on), manual otherwise (P1).
-    this.current = this.controllers.has("baseline") ? "baseline" : "manual";
-    this.controller.enter();
+  constructor(manual: Controller) {
+    this.controllers.set(MANUAL, manual);
+    manual.enter();
   }
 
   get mode(): ControlMode {
@@ -43,6 +50,10 @@ export class ModeMachine {
     this.controllers.set(mode, controller);
   }
 
+  entries(): IterableIterator<[ControlMode, Controller]> {
+    return this.controllers.entries();
+  }
+
   /** Returns true when the mode changed. Unavailable modes are ignored. */
   setMode(mode: ControlMode): boolean {
     if (mode === this.current || !this.controllers.has(mode)) return false;
@@ -53,14 +64,18 @@ export class ModeMachine {
 
   /** Visitor grabbed a joint: automatic controllers yield to manual posing. */
   jointGrab(): boolean {
-    return this.setMode("manual");
+    return this.setMode(MANUAL);
   }
 
-  /** The learned policy could not be loaded or verified. */
-  policyLoadFailed(): boolean {
-    this.controllers.delete("learned");
-    if (this.current !== "learned") return false;
-    this.current = "baseline";
+  /**
+   * A controller could not be created (e.g. its policy failed verification): drop it and, if it
+   * was active, fall back to `fallback` (or manual).
+   */
+  controllerFailed(mode: ControlMode, fallback: ControlMode): boolean {
+    if (mode === MANUAL) return false;
+    this.controllers.delete(mode);
+    if (this.current !== mode) return false;
+    this.current = this.controllers.has(fallback) ? fallback : MANUAL;
     this.controller.enter();
     return true;
   }

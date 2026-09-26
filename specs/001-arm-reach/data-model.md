@@ -35,14 +35,16 @@ Visual only (no collision). `reachable` is not a policy input.
 
 ### ControlMode (state machine)
 
-States: `manual`, `baseline`, `learned` (available once the policy has loaded).
+States: `manual` (built in) plus one per controller in `web/src/control/registry.ts`: `baseline`
+(preloaded), `learned` (created on first selection, when its policy loads), and lab controllers
+such as `jacobian-transpose` (shown with `?lab`). Adding a controller adds a state.
 
 | From | Event | To |
 |------|-------|----|
 | any | `setMode` | requested mode |
 | `baseline` / `learned` | `dragJoint` | `manual` (reason `joint-grab`) |
 | any | `reset` | same mode; arm and target return to their defaults |
-| `learned` | policy load or hash check fails | `baseline` (reason `policy-load-failed`) |
+| any controller | creation fails (e.g. policy load or hash check) | `baseline` (reason `controller-failed`) |
 
 **Rules**: A switch never changes `q`, `qd`, or `Target.pos` (FR-012). Entering `learned` sets
 `prevAction` to zeros. The initial mode is `manual` in P1 and `baseline` from P2 onward.

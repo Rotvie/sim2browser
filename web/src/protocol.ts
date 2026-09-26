@@ -25,8 +25,10 @@ export interface Snapshot {
   target: Float64Array;
   reachable: boolean;
   mode: ControlMode;
-  /** Present once the policy is loaded; in other modes it shows what the policy would do. */
+  /** From a controller that can be inspected (the learned policy), once it is loaded. */
   policyStep?: import("./control/learned").PolicyStep;
+  /** True when policyStep comes from the controller in charge (not a what-if). */
+  policyStepActive: boolean;
 }
 
 export interface ReadyInfo {
@@ -39,7 +41,8 @@ export interface ReadyInfo {
   geoms: import("./sim/mujoco").GeomInfo[];
   neutralPose: number[];
   maxReach: number;
-  modes: ControlMode[];
+  /** Automatic controllers this build offers (Manual is always available). */
+  controllers: { id: string; label: string; description: string; public: boolean }[];
   /** Baseline design parameters, shown in the info panel (parity.json `baseline`). */
   baseline: import("./sim/parity").Parity["baseline"];
   /** Observation fields (labels for the panel). */
@@ -53,5 +56,5 @@ export type FromWorker =
   | ({ type: "snapshot" } & Snapshot)
   | { type: "modeChanged"; mode: ControlMode; reason: ModeChangeReason }
   | { type: "error"; code: ErrorCode; message: string }
-  /** The learned policy could not be loaded or verified; the page keeps running on Baseline. */
-  | { type: "policyError"; message: string };
+  /** A controller could not be created (e.g. policy failed verification); the page keeps running. */
+  | { type: "controllerError"; id: string; message: string };

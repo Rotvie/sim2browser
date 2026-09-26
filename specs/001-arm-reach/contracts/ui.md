@@ -11,7 +11,7 @@ One page (`index.html`), no routes. Covers FR-001–FR-017.
 | Pose joint | drag a link (rotates its joint) | drag a link | P1 |
 | Move target | drag the target (in a plane facing the camera) | drag the target | P2 |
 | Target depth | wheel over the target / shift-drag | two-finger drag on the target | P2 |
-| Mode switch | segmented control: `Manual` · `Baseline` · `Learned` | same | P2 (Learned from P3) |
+| Mode switch | segmented control: `Manual` + registry controllers (`Baseline` · `Learned`; lab controllers with `?lab`) | same | P2 (Learned from P3) |
 | Reset | button | button | P1 |
 | Observe/output panel | toggle button, collapsed by default | same, becomes a bottom sheet | P3 |
 | Info panel | "i" button | same | P2 (baseline design), P3 (policy + metrics) |

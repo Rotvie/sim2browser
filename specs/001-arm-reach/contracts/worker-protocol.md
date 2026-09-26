@@ -11,7 +11,7 @@ transferable `Float64Array`s.
 | `init` | `{ baseUrl }` | load the engine and, in parallel, `parity.json`, XML, meshes and workspace grid; verify; create the sim; reply `ready` or `error`. Sent by the boot script before the app chunk (three.js) loads |
 | `setTarget` | `{ pos: [x,y,z] }` | clamp and set the target position |
 | `dragJoint` | `{ joint: i, angle }` | switch to Manual; set `ctrl[i]` = angle clipped to limits |
-| `setMode` | `{ mode: "manual" \| "baseline" \| "learned" }` | switch controller; no state reset |
+| `setMode` | `{ mode: "manual" \| <registry id> }` | switch controller, creating it on first use (it may load assets); no state reset |
 | `reset` | `{}` | default pose and target; keep the mode |
 | `visibility` | `{ hidden: bool }` | pause/resume; reset the clock |
 
@@ -19,9 +19,10 @@ transferable `Float64Array`s.
 
 | `type` | Payload | Rate |
 |--------|---------|------|
-| `ready` | `{ joints, limits, bodyJoint, bodyNames, bodyParent, geoms, neutralPose, maxReach, modes }` (geoms carry mesh vertices/faces from the compiled model for rendering) | once |
+| `ready` | `{ joints, limits, bodyJoint, bodyNames, bodyParent, geoms, neutralPose, maxReach, baseline, observation, controllers: [{ id, label, description, public }] }` (geoms carry mesh vertices/faces from the compiled model for rendering) | once |
 | `snapshot` | `{ t, bodyPos: Float64Array, bodyQuat: Float64Array, q, qd, ctrl, tip, jointAnchor, jointAxis, mode, target?, reachable?, policyStep? }` (target fields from P2) | each control step (50 Hz), coalesced to the latest if the main thread lags |
-| `modeChanged` | `{ mode, reason? }` | on change (e.g. `"joint-grab"`, `"policy-load-failed"`) |
+| `modeChanged` | `{ mode, reason }` | on change (`"user"`, `"joint-grab"`, `"controller-failed"`) |
+| `controllerError` | `{ id, message }` | a controller could not be created (e.g. policy failed verification); the page keeps running on the baseline |
 | `error` | `{ code, message }` | on failure (`asset-load`, `version-mismatch`, `hash-mismatch`) |
 
 `policyStep` = `{ obsRaw, obsNorm, action, prevAction }`, sent while Learned is active (and computed

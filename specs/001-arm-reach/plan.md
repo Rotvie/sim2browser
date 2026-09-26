@@ -92,7 +92,8 @@ web/
 │   ├── main.ts                # boot, loading/error states, render loop
 │   ├── worker.ts              # thin adapter: messages ↔ sim/control
 │   ├── sim/                   # mujoco loader, stepping clock, obs builder, reach check (no DOM)
-│   ├── control/               # modes, manual, baseline (DLS IK), policy (MLP) (no DOM)
+│   ├── control/               # registry (plug-in point), modes, manual, baseline (DLS IK),
+│   │                          #   learned + policy (MLP), jacobianTranspose (example) (no DOM)
 │   ├── render/                # scene, arm meshes, target gizmo, camera, interpolation
 │   └── ui/                    # mode switch, observe/output panel, info panel, hint, messages
 ├── scripts/                   # eval.ts, eval-compare.ts, size.ts

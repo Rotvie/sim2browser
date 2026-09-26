@@ -1,22 +1,21 @@
 /** Segmented control for the active controller (FR-010). The active mode is always visible. */
 import type { ControlMode } from "../control/modes";
 
-const LABELS: Record<ControlMode, string> = {
-  manual: "Manual",
-  baseline: "Baseline",
-  learned: "Learned",
-};
+export interface ModeOption {
+  id: ControlMode;
+  label: string;
+}
 
 export interface ModeSwitch {
   /** Reflect the worker's mode (from snapshots or modeChanged). */
   show(mode: ControlMode): void;
-  /** Learned is loading its policy (spinner) or failed to load (disabled with a reason). */
-  learnedState(state: "idle" | "loading" | "failed", reason?: string): void;
+  /** A controller is being created (spinner) or failed to load (disabled with a reason). */
+  setState(id: ControlMode, state: "idle" | "loading" | "failed", reason?: string): void;
 }
 
 export function createModeSwitch(
   toolbar: HTMLElement,
-  modes: ControlMode[],
+  options: ModeOption[],
   onSelect: (mode: ControlMode) => void,
 ): ModeSwitch {
   const group = document.createElement("div");
@@ -24,32 +23,33 @@ export function createModeSwitch(
   group.setAttribute("role", "group");
   group.setAttribute("aria-label", "Controller");
   const buttons = new Map<ControlMode, HTMLButtonElement>();
-  for (const mode of modes) {
+  for (const { id, label } of options) {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = LABELS[mode];
-    b.dataset.mode = mode;
+    b.textContent = label;
+    b.dataset.mode = id;
     b.setAttribute("aria-pressed", "false");
-    b.addEventListener("click", () => onSelect(mode));
-    buttons.set(mode, b);
+    b.addEventListener("click", () => onSelect(id));
+    buttons.set(id, b);
     group.appendChild(b);
   }
   toolbar.prepend(group);
   let current: ControlMode | null = null;
-  return {
+  const api: ModeSwitch = {
     show(mode) {
       if (mode === current) return;
       current = mode;
       for (const [m, b] of buttons) b.setAttribute("aria-pressed", String(m === mode));
-      if (mode === "learned") this.learnedState("idle");
+      api.setState(mode, "idle");
     },
-    learnedState(state, reason) {
-      const b = buttons.get("learned");
+    setState(id, state, reason) {
+      const b = buttons.get(id);
       if (!b) return;
       b.classList.toggle("loading", state === "loading");
       b.setAttribute("aria-busy", String(state === "loading"));
       b.disabled = state === "failed";
-      b.title = state === "failed" ? `The learned policy could not be loaded: ${reason ?? ""}` : "";
+      b.title = state === "failed" ? `${b.textContent} could not be loaded: ${reason ?? ""}` : "";
     },
   };
+  return api;
 }
