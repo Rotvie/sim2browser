@@ -196,7 +196,7 @@ loop, which every story builds on.
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 - [ ] T079 [P] Write `web/tests/e2e/edge-cases.spec.ts`: a hidden tab (emulated `visibilitychange`) pauses the sim, and on resume `q` changes smoothly with no jump > 0.1 rad in the first frame; blocking `so100_reach.xml` shows the error message with Retry, and Retry after unblocking loads the arm; the portrait and landscape mobile viewports keep the mode switch, reset, and panel toggle visible and clickable
-- [ ] T080 [P] Write the root `README.md`: what web-robot is, the public URL, the three rungs, how to run (link to `specs/001-arm-reach/quickstart.md`), the parity approach, and credits (MuJoCo, Menagerie SO-ARM100, Apache-2.0 notices)
+- [X] T080 [P] Write the root `README.md`: what web-robot is, the public URL, the three rungs, how to run (link to `specs/001-arm-reach/quickstart.md`), the parity approach, and credits (MuJoCo, Menagerie SO-ARM100, Apache-2.0 notices)
 - [ ] T081 Run the informal visitor test with at least 5 first-time visitors without a robotics background on the public URL: measure the seconds until their first target/joint move (SC-006: ≥ 4 of 5 within 10 s) and ask them to compare Learned and Baseline without explanation (SC-007: ≥ 4 of 5 describe Learned as smoother or more natural). Record the anonymized results in `specs/001-arm-reach/validation.md`
 - [ ] T082 Minimality pass (Principle V): remove unused code, exports, dependencies, and assets across `web/`, `training/`, and `shared/`; confirm runtime dependencies are only `@mujoco/mujoco` and `three`; re-run `npm run size`
 - [ ] T083 Run every command in `specs/001-arm-reach/quickstart.md` from a clean clone and fix any drift between the docs and the code

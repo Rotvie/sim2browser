@@ -69,6 +69,8 @@ body {
   left: 50%;
   bottom: max(16px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
+  /* With left: 50% the shrink-to-fit width would be capped at half the viewport and wrap early. */
+  width: max-content;
   display: flex;
   gap: 8px;
   align-items: center;
