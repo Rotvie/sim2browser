@@ -15,9 +15,9 @@ especially [`validation.md`](../specs/001-arm-reach/validation.md).
 ## Open items from 001
 
 - [ ] Real-phone checks for P1–P3 (tasks T042, T057, T078): drag, two-finger depth, switch
-  Learned ↔ Baseline mid-drag, policy view as a bottom sheet, info panel.
+      Learned ↔ Baseline mid-drag, policy view as a bottom sheet, info panel.
 - [ ] Polish tasks T079 (edge-case e2e), T081 (5-visitor test for SC-006/SC-007), T082
-  (minimality pass), T083 (quickstart from a clean clone).
+      (minimality pass), T083 (quickstart from a clean clone).
 - [ ] Credibility fixes for the learned policy:
   - Remove Wrist_Roll from the policy's action space (hold it at neutral). It is invisible to
     the reward and metrics, so the policy spins it. This changes the parity contract (action
