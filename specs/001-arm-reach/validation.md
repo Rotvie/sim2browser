@@ -227,4 +227,8 @@ First public CI runs: 42/43 e2e passed each time, with one hardware-bound failur
 (1) the P1 posing scenario ran past the 60 s timeout under the 4× mobile throttle (now 180 s);
 (2) the circular-drag lag reached 5.3 cm against 5 cm on mobile Chromium, because the sim runs
 slower than real time on the runner while the drag follows the wall clock. CI now allows 8 cm;
-local and real-device runs keep 5 cm.
+local and real-device runs keep 5 cm. (3) A third run failed the snapshot-gap check (0.12 s vs
+0.10 s) in the same project: the page samples snapshots once per rendered frame, and frames were
+that slow. Root cause for all three: the 4× CPU throttle stacked on an already slow runner.
+The mobile-chromium throttle is now applied on development machines only (where it is
+calibrated); in CI that project checks viewport, touch and layout.
