@@ -79,6 +79,7 @@
     "margin": 0.01,
     "hysteresis": 0.005,
     "minZ": 0.01,
+    "frontMargin": 0.02,
     "baseAxisXY": [
       0.0,
       -0.0452
@@ -86,16 +87,16 @@
     "baseExclusionRadius": 0.05,
     "workspace": {
       "path": "workspace.bin",
-      "sha256": "e7f61e69a6d124834ebdd5dc77e6d03546f7bdba7193ee618b062f135e1ea371",
+      "sha256": "ba57df723fa6772623738cc21973e428930495ee837c93ac140f9b91beb7a826",
       "origin": [
-        -0.461173,
+        -0.460374,
         -0.506139,
         -0.01
       ],
       "voxel": 0.01,
       "dims": [
         93,
-        87,
+        47,
         57
       ],
       "layout": "x-fastest, bit-packed little-endian"
@@ -112,6 +113,7 @@
     "gain": 5.0,
     "maxJointSpeed": 2.5,
     "nullspaceGain": 0.5,
+    "reachStandoff": 0.02,
     "neutralPose": [
       0.0,
       -1.573,

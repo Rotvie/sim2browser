@@ -29,11 +29,12 @@ parity tests only read it. Nothing in it is hand-copied into code.
     "normalization": { "mean": [/* 21 */], "std": [/* 21 */], "clip": 10.0, "eps": 1e-8 }
   },
   "reach": { "maxReach": 0.0, "margin": 0.01, "hysteresis": 0.005, "minZ": 0.01,
-             "baseExclusionRadius": 0.05,
+             "frontMargin": 0.02, "baseAxisXY": [x, y], "baseExclusionRadius": 0.05,
              "workspace": { "path": "workspace.bin", "sha256": "<hex>", "origin": [x, y, z],
                             "voxel": 0.01, "dims": [nx, ny, nz] } },
   "success": { "tolerance": 0.01, "maxTipSpeed": 0.02, "hold": 0.2, "timeLimit": 2.0 },
   "baseline": { "damping": 0.05, "gain": 5.0, "maxJointSpeed": 2.5, "nullspaceGain": 0.5,
+                "reachStandoff": 0.02,
                 "neutralPose": [/* 5 */] },
   "policy": { "path": "policy/reach.bin", "header": "policy/reach.json", "sha256": "<hex>" }
 }
@@ -51,7 +52,8 @@ is measured from forward-kinematics sampling at export, not guessed.)
   on mesh geometry. Visual meshes can then change without changing the physics; they still
   change the hash, which is intended.
 - `reach.workspace` is a bit-packed occupancy grid (1 = the tip reaches some point in that voxel,
-  within joint limits), built at export from forward-kinematics samples, dilated by one voxel and
+  within joint limits, in front of the base: y ≤ `baseAxisXY[1] − frontMargin`), built at export
+  from forward-kinematics samples, dilated by one voxel and
   then eroded by one voxel to fill gaps between samples. It drives the UI `reachable` indicator.
   `maxReach` is kept only for sampling unreachable training targets.
 

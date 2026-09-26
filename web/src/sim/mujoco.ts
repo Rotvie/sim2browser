@@ -53,6 +53,10 @@ export interface Sim {
   jointFrames(): { anchor: Float64Array; axis: Float64Array };
   /** Translational site Jacobian (3 x nv, row-major), current state. */
   jacSite(name: string): Float64Array;
+  /** Translational site Jacobian restricted to the controlled joints (3 x n, parity.joints order). */
+  jacSiteJoints(name: string): Float64Array;
+  /** Site position for joint positions q, computed on scratch data (live state untouched). */
+  fkSite(name: string, q: ArrayLike<number>): Float64Array;
   /** Set joint positions, zero velocities, ctrl = q; recompute derived quantities. */
   resetToPose(q: ArrayLike<number>): void;
   geoms(): GeomInfo[];
@@ -113,6 +117,7 @@ export function createSim(mj: Mujoco, parity: Parity, files: ReadonlyMap<string,
     return id;
   };
   const jac = new mj.DoubleBuffer(3 * model.nv);
+  const scratch = new mj.MjData(model);
 
   const gather = (src: Float64Array, adr: Int32Array) => {
     const out = new Float64Array(n);
@@ -165,6 +170,22 @@ export function createSim(mj: Mujoco, parity: Parity, files: ReadonlyMap<string,
       mj.mj_jacSite(model, data, jac, null, siteId(name));
       return Float64Array.from(jac.GetView() as Float64Array);
     },
+    jacSiteJoints(name) {
+      mj.mj_jacSite(model, data, jac, null, siteId(name));
+      const full = jac.GetView() as Float64Array;
+      const nv = model.nv;
+      const out = new Float64Array(3 * n);
+      for (let r = 0; r < 3; r++)
+        for (let i = 0; i < n; i++) out[r * n + i] = full[r * nv + dofAdr[i]];
+      return out;
+    },
+    fkSite(name, q) {
+      const qpos = scratch.qpos as Float64Array;
+      for (let i = 0; i < n; i++) qpos[qposAdr[i]] = q[i];
+      mj.mj_kinematics(model, scratch);
+      const id = siteId(name);
+      return Float64Array.from((scratch.site_xpos as Float64Array).subarray(3 * id, 3 * id + 3));
+    },
     resetToPose(q) {
       const qpos = data.qpos as Float64Array;
       (data.qvel as Float64Array).fill(0);
@@ -206,6 +227,7 @@ export function createSim(mj: Mujoco, parity: Parity, files: ReadonlyMap<string,
     },
     dispose() {
       jac.delete();
+      scratch.delete();
       data.delete();
       model.delete();
     },

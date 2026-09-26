@@ -219,6 +219,11 @@ switch controllers mid-reach; open the panel and watch values change as the targ
 - The learned policy is trained offline, outside the browser; training tooling is not part of the
   shipped demo.
 - The task is tip position only (no orientation); robot model choice is made in the plan.
+- "Reachable" means reachable in the **front workspace**, in front of the arm's base (decided
+  2026-09-26 during P2). Points behind the base need the arm folded back over itself; a reactive
+  classical controller cannot get there from its forward pose (77% success over the full
+  workspace vs. 100% in front). Behind-the-base targets are shown as out of reach. The same
+  definition applies to the UI, SC-003/SC-004 evaluation, and P3 training.
 - The target is the only movable object; no obstacles in this feature.
 
 ## Out of Scope

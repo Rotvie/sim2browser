@@ -80,6 +80,17 @@ Each entry: Decision / Rationale / Alternatives considered.
   trajectory generator. Implemented once in TypeScript (the shipped controller).
 - **Rationale**: The textbook reactive controller: exact, competent, robust near singularities
   and limits (FR-009). Its mechanical character comes from its design.
+- **Out-of-reach handling (P2)**: the baseline aims at the nearest sensible point instead of the
+  raw target: behind the base it moves the aim onto the front-workspace boundary, and beyond
+  `maxReach − reachStandoff` (0.02 m) from the shoulder it projects onto that sphere. Aiming
+  at the raw target drove the stretched arm into its singularity, where integrating targets,
+  servo lag and the null-space pull made a 1.4 cm limit cycle; with the projection it is 0.13 mm.
+  More damping or error clamping also stopped the oscillation but cut success to 16–60%.
+- **Front workspace (P2 decision)**: over the full reachable set the baseline settled on only
+  77/100 targets; every failure was behind the base, where the arm must fold back over itself
+  and a reactive controller starting from the forward pose is stuck in a local minimum. The demo
+  workspace is therefore the front half (`reach.frontMargin`), for the UI grid, evaluation and
+  training alike. In front, the baseline settles on 100% (3 seeds × 100 targets).
 - **Honesty**: A trajectory generator such as minimum-jerk would also be smooth, so the claim is
   "learned reactive policy vs. classical reactive controller". The demo's info panel documents
   the baseline's design (algorithm, gains, limits) and this caveat.
@@ -165,7 +176,7 @@ Each entry: Decision / Rationale / Alternatives considered.
 | Learned success (SC-004) | ≥ **95%** of the same 100 targets within 2 s |
 | Smoothness (SC-009) | learned mean squared tip jerk ≥ **30% lower** than baseline (ratio ≤ 0.70) |
 | Jerk measurement | third finite difference of the simulated tip position at control rate (50 Hz) |
-| Reachable (evaluation) | forward kinematics of a random joint configuration within limits |
+| Reachable (evaluation) | forward kinematics of a random joint configuration within limits, tip in the front workspace (y ≤ base y − 0.02 m), z ≥ minZ, outside the base exclusion radius |
 | Reachable (UI indicator) | voxel occupancy in `shared/workspace.bin` (1 cm grid from FK samples, built at export) and above the ground, with hysteresis; `maxReach` is used only to sample unreachable training targets |
 | Frame rate (SC-002) | ≥ 30 fps, no frame gap > 100 ms |
 

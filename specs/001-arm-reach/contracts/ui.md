@@ -19,9 +19,12 @@ One page (`index.html`), no routes. Covers FR-001–FR-017.
 ## Visible states
 
 - **Active mode**: always highlighted in the mode switch (FR-010).
-- **Out of reach**: the target changes color and a ring appears around it; label "out of reach"
-  (FR-009).
-- **First visit hint**: an animated hand/arrow pointing at the target (P1: at a joint) that
+- **Target**: blue sphere with a dashed stem to a ground dot (depth cue). **Out of reach**: it
+  turns orange, a camera-facing ring appears around it, and an "Out of reach" label shows (FR-009).
+- **Camera**: framed so the arm and its front workspace fit any aspect ratio (portrait phones
+  back off further) until the visitor orbits or zooms.
+- **First visit hint**: an animated marker labelled "Drag the target" on the target (P1: "Drag
+  the arm" on the upper arm) that
   disappears on the first interaction (FR-017). Not shown again once the visitor has
   interacted during that page session.
 - **Loading**: a progress indicator until interactive; never a blank page.
@@ -51,4 +54,4 @@ One page (`index.html`), no routes. Covers FR-001–FR-017.
 
 `window.__webRobot` (present in all builds, read-only): `snapshot` (latest worker snapshot), `ready`,
 `fps`, `maxFrameGapMs`, `resetFrameStats()`, `camera()`, `linkScreenPoint(bodyName)`, `bodyNames()`,
-`limits()`. Playwright tests use it. It is not a public API.
+`limits()`, `targetScreenPoint()`, `worldToScreen(p)`. Playwright tests use it. It is not a public API.

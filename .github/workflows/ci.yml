@@ -21,6 +21,12 @@ jobs:
       - run: npm test --workspace web
       - run: npm run build --workspace web
       - run: npm run size --workspace web
+      # SC-003: the shipped baseline must settle on >= 99% of 100 seeded reachable targets.
+      - run: npm run eval --workspace web -- --controller baseline --n 100 --seed 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-baseline
+          path: web/eval/baseline.json
       - uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -62,7 +68,7 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
         working-directory: web
       # Release checks for every rung: static-only (constitution gate 3) and the rung's e2e tags.
-      - run: npx playwright test --grep "@p1"
+      - run: npx playwright test --grep "@p1|@p2"
         working-directory: web
       - uses: actions/upload-artifact@v4
         if: failure()

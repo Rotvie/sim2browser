@@ -5,8 +5,11 @@ import { createArmView } from "./render/arm";
 import { PoseInterpolator } from "./render/interp";
 import { attachJointPicker } from "./render/picking";
 import { createScene } from "./render/scene";
+import { createTargetView, type TargetView } from "./render/target";
 import { createHint } from "./ui/hint";
+import { createInfoPanel } from "./ui/infoPanel";
 import type { Messages } from "./ui/messages";
+import { createModeSwitch, type ModeSwitch } from "./ui/modeSwitch";
 import { createResetButton } from "./ui/resetButton";
 
 export interface AppContext {
@@ -46,10 +49,12 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   const send = (msg: ToWorker) => worker.postMessage(msg);
   const interp = new PoseInterpolator();
   const stats = new FrameStats();
-  const hint = createHint(app, "Drag the arm");
+  const hint = createHint(app, "Drag the target");
   let latest: Snapshot | null = null;
   let ready: ReadyInfo | null = null;
   let arm: ReturnType<typeof createArmView> | null = null;
+  let target: TargetView | null = null;
+  let modeSwitch: ModeSwitch | null = null;
 
   const bodyIndex = (name: string) => ready?.bodyNames.indexOf(name) ?? -1;
   const bodyPos = (b: number): THREE.Vector3 | null =>
@@ -80,6 +85,16 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         ready = msg;
         arm = createArmView(msg.geoms, msg.bodyNames.length);
         view.scene.add(arm.root);
+        // Registered before the joint picker: grabbing the target takes priority.
+        target = createTargetView({
+          canvas,
+          camera: view.camera,
+          scene: view.scene,
+          overlay: app,
+          latest: () => latest,
+          send: (pos) => send({ type: "setTarget", pos }),
+          onInteract: () => hint.dismiss(),
+        });
         attachJointPicker({
           canvas,
           camera: view.camera,
@@ -90,14 +105,20 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           send: (joint, angle) => send({ type: "dragJoint", joint, angle }),
           onInteract: () => hint.dismiss(),
         });
+        modeSwitch = createModeSwitch(toolbar, msg.modes, (mode) =>
+          send({ type: "setMode", mode }),
+        );
+        createInfoPanel(app, toolbar, msg.baseline);
         messages.hide();
         break;
       }
       case "snapshot":
         latest = msg;
+        modeSwitch?.show(msg.mode);
         interp.push({ pos: msg.bodyPos, quat: msg.bodyQuat }, performance.now());
         break;
       case "modeChanged":
+        modeSwitch?.show(msg.mode);
         break;
       case "error":
         messages.error(msg.message, () => {
@@ -123,8 +144,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
     stats.frame(now);
     const pose = interp.sample(now);
     if (arm && pose) arm.setPose(pose);
-    const mid = linkMid("Upper_Arm");
-    hint.place(mid ? toScreen(mid) : null);
+    target?.update();
+    hint.place(target?.screenPoint() ?? null);
     view.render();
     requestAnimationFrame(loop);
   };
@@ -152,6 +173,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         return m ? toScreen(m) : null;
       },
       bodyNames: () => ready?.bodyNames ?? [],
+      targetScreenPoint: () => target?.screenPoint() ?? null,
+      worldToScreen: (p: [number, number, number]) => toScreen(new THREE.Vector3(...p)),
       limits: () => (ready ? Array.from(ready.limits) : []),
     }),
   });

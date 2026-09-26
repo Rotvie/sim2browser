@@ -62,6 +62,7 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
   const end = Date.now() + DURATION_MS;
   let nextModeSwitch = Date.now() + 5000 + rand() * 15_000;
   let actions = 0;
+  let targetDrags = 0;
 
   while (Date.now() < end) {
     const r = rand();
@@ -70,7 +71,25 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
       const n = await modeButtons.count();
       if (n > 0) await modeButtons.nth(Math.floor(rand() * n)).click();
       nextModeSwitch = Date.now() + 5000 + rand() * 15_000;
-    } else if (r < 0.55) {
+    } else if (r < 0.35) {
+      // Target drag (P2 on), sometimes far enough to leave the reachable workspace.
+      const pt = await page.evaluate(() =>
+        "targetScreenPoint" in window.__webRobot ? window.__webRobot.targetScreenPoint() : null,
+      );
+      if (pt && pt[0] > 0 && pt[1] > 0 && pt[0] < vp.width && pt[1] < vp.height) {
+        const far = rand() < 0.3 ? 3 : 1;
+        const dx = (rand() - 0.5) * 300 * far;
+        const dy = (rand() - 0.5) * 200 * far;
+        await page.mouse.move(pt[0], pt[1]);
+        await page.mouse.down();
+        for (let i = 1; i <= 20; i++) {
+          await page.mouse.move(pt[0] + (dx * i) / 20, pt[1] + (dy * i) / 20);
+          await page.waitForTimeout(16);
+        }
+        await page.mouse.up();
+        targetDrags++;
+      }
+    } else if (r < 0.6) {
       const pt = await page.evaluate(
         (l) => window.__webRobot.linkScreenPoint(l),
         links[Math.floor(rand() * links.length)],
@@ -106,6 +125,7 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
     () => (window as unknown as { __soak: { bad: string[]; maxGap: number } }).__soak,
   );
   info.annotations.push({ type: "actions", description: String(actions) });
+  info.annotations.push({ type: "target-drags", description: String(targetDrags) });
   info.annotations.push({ type: "max-snapshot-gap-ms", description: soak.maxGap.toFixed(1) });
   expect(soak.bad.slice(0, 5)).toEqual([]);
   expect(soak.maxGap).toBeLessThanOrEqual(500);

@@ -56,3 +56,16 @@ def test_workspace_contains_neutral_tip(parity):
     i, j, k = np.floor((tip - np.array(ws["origin"])) / ws["voxel"]).astype(int)
     assert bits[i + nx * (j + ny * k)] == 1
     assert tip[2] >= parity["reach"]["minZ"]
+
+
+def test_workspace_is_front_only(parity):
+    ws = parity["reach"]["workspace"]
+    nx, ny, nz = ws["dims"]
+    bits = np.unpackbits(np.fromfile(SHARED / ws["path"], dtype=np.uint8), bitorder="little")
+    occ = bits[: nx * ny * nz].reshape(nz, ny, nx)
+    _, js, _ = np.nonzero(occ)
+    # Lower voxel edge in y of every occupied voxel; closing may grow one voxel past the samples.
+    y_lo = ws["origin"][1] + js * ws["voxel"]
+    front_y = parity["reach"]["baseAxisXY"][1] - parity["reach"]["frontMargin"]
+    assert occ.any()
+    assert y_lo.max() <= front_y + ws["voxel"]

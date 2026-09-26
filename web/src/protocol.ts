@@ -5,6 +5,7 @@ import type { ParityErrorCode } from "./sim/parity";
 export type ToWorker =
   | { type: "init"; baseUrl: string }
   | { type: "dragJoint"; joint: number; angle: number }
+  | { type: "setTarget"; pos: [number, number, number] }
   | { type: "setMode"; mode: ControlMode }
   | { type: "reset" }
   | { type: "visibility"; hidden: boolean };
@@ -21,6 +22,8 @@ export interface Snapshot {
   /** World anchor and axis of each controlled joint (n*3 each). */
   jointAnchor: Float64Array;
   jointAxis: Float64Array;
+  target: Float64Array;
+  reachable: boolean;
   mode: ControlMode;
 }
 
@@ -35,6 +38,8 @@ export interface ReadyInfo {
   neutralPose: number[];
   maxReach: number;
   modes: ControlMode[];
+  /** Baseline design parameters, shown in the info panel (parity.json `baseline`). */
+  baseline: import("./sim/parity").Parity["baseline"];
 }
 
 export type ErrorCode = ParityErrorCode | "asset-load" | "internal";

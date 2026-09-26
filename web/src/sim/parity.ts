@@ -32,6 +32,8 @@ export interface Parity {
     margin: number;
     hysteresis: number;
     minZ: number;
+    /** Demo workspace is in front of the base: tip y <= baseAxisXY[1] - frontMargin. */
+    frontMargin: number;
     baseAxisXY: [number, number];
     baseExclusionRadius: number;
     workspace: {
@@ -48,6 +50,8 @@ export interface Parity {
     gain: number;
     maxJointSpeed: number;
     nullspaceGain: number;
+    /** Far targets are projected to maxReach - reachStandoff from the shoulder. */
+    reachStandoff: number;
     neutralPose: number[];
   };
   policy?: { path: string; header: string; sha256: string };
@@ -113,13 +117,15 @@ export async function loadShared(
   const parity = JSON.parse(new TextDecoder().decode(await read("parity.json"))) as Parity;
   validateParity(parity, parity.mujocoVersion);
 
+  // Fetch everything at once; verify after.
   const modelFiles = new Map<string, Uint8Array>();
-  await Promise.all(parity.model.files.map(async (path) => modelFiles.set(path, await read(path))));
+  const [workspace] = await Promise.all([
+    read(parity.reach.workspace.path),
+    ...parity.model.files.map(async (path) => modelFiles.set(path, await read(path))),
+  ]);
   if ((await sha256Model(modelFiles)) !== parity.model.sha256) {
     throw new ParityError("hash-mismatch", "robot model files do not match parity.json");
   }
-
-  const workspace = await read(parity.reach.workspace.path);
   if ((await sha256Hex(workspace)) !== parity.reach.workspace.sha256) {
     throw new ParityError("hash-mismatch", "workspace.bin does not match parity.json");
   }

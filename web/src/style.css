@@ -201,3 +201,143 @@ body {
     animation: none;
   }
 }
+
+.segmented {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(29, 35, 43, 0.06);
+}
+
+.segmented button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: #ffffff;
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(29, 35, 43, 0.15);
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.btn.icon {
+  padding: 0;
+  width: 44px;
+  font-weight: 700;
+  font-family: Georgia, serif;
+}
+
+.panel {
+  position: absolute;
+  right: 16px;
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px);
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100dvh - 160px);
+  overflow: auto;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 14px;
+  line-height: 1.45;
+  z-index: 5;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.panel h3 {
+  margin: 12px 0 4px;
+  font-size: 14px;
+}
+
+.panel p {
+  margin: 6px 0;
+}
+
+.panel .note {
+  color: var(--muted);
+}
+
+.panel dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 8px 0;
+}
+
+.panel dt {
+  color: var(--muted);
+}
+
+.panel dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel .close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.target-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -40px);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #ea580c;
+  color: #ffffff;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.target-label[hidden] {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .segmented button {
+    padding: 0 10px;
+  }
+  .panel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}

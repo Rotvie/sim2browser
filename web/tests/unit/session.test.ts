@@ -4,21 +4,22 @@ import { loadNodeSim } from "../node-shared";
 
 describe("session", () => {
   it("mode switches never touch q or qd (FR-012)", async () => {
-    const { sim, parity } = await loadNodeSim();
-    const s = createSession(sim, parity);
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace);
     for (let i = 0; i < 10; i++) s.controlStep();
     const q = sim.q();
     const qd = sim.qd();
     s.setMode("manual");
-    s.setMode("baseline"); // unavailable in P1: ignored
+    s.setMode("learned"); // unavailable until P3: ignored
+    s.setMode("baseline");
     expect(Array.from(sim.q())).toEqual(Array.from(q));
     expect(Array.from(sim.qd())).toEqual(Array.from(qd));
     sim.dispose();
   });
 
   it("dragJoint clips to limits and the joint settles there", async () => {
-    const { sim, parity } = await loadNodeSim();
-    const s = createSession(sim, parity);
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace);
     s.dragJoint(0, 99);
     const maxPerStep = parity.baseline.maxJointSpeed / parity.controlHz;
     let prev = sim.ctrl()[0];
@@ -40,8 +41,8 @@ describe("session", () => {
 
 describe("joint limits under abrupt manual commands (FR-005)", () => {
   it("slamming every joint between its limits never exceeds them by more than 0.01 rad", async () => {
-    const { sim, parity } = await loadNodeSim();
-    const s = createSession(sim, parity);
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace);
     let worst = 0;
     for (let k = 0; k < 12; k++) {
       for (let j = 0; j < sim.nu; j++) s.dragJoint(j, (k + j) % 2 ? 99 : -99);

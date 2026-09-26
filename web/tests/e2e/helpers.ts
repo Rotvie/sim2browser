@@ -2,13 +2,22 @@ import type { Page } from "@playwright/test";
 
 export interface Hook {
   ready: boolean;
-  snapshot: { q: Float64Array; mode: string } | null;
+  snapshot: {
+    t: number;
+    q: Float64Array;
+    tip: Float64Array;
+    target: Float64Array;
+    reachable: boolean;
+    mode: string;
+  } | null;
   fps: number;
   maxFrameGapMs: number;
   resetFrameStats(): void;
   camera(): number[];
   linkScreenPoint(name: string): [number, number] | null;
   limits(): number[];
+  targetScreenPoint(): [number, number] | null;
+  worldToScreen(p: [number, number, number]): [number, number];
 }
 
 declare global {
@@ -72,4 +81,21 @@ export function collectConsoleErrors(page: Page): string[] {
   });
   page.on("pageerror", (e) => errors.push(e.message));
   return errors;
+}
+
+/** Drag the target by (dx, dy) pixels with one mouse step per frame. */
+export async function dragTarget(page: Page, dx: number, dy: number, steps = 20) {
+  const pt = await page.evaluate(() => window.__webRobot.targetScreenPoint());
+  if (!pt) throw new Error("no target on screen");
+  await page.mouse.move(pt[0], pt[1]);
+  await page.mouse.down();
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(pt[0] + (dx * i) / steps, pt[1] + (dy * i) / steps);
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+}
+
+export function tipToTarget(s: { tip: ArrayLike<number>; target: ArrayLike<number> }): number {
+  return Math.hypot(s.tip[0] - s.target[0], s.tip[1] - s.target[1], s.tip[2] - s.target[2]);
 }

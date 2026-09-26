@@ -78,4 +78,56 @@ passed**: 601 s, 817 actions, max snapshot gap 66.7 ms, no limit breach, NaN or 
 
 ## P2
 
+### Baseline evaluation (SC-003), `npm run eval -- --controller baseline --n 100`
+
+| Seed | Success (≥ 99%) | Settle p50 | Settle p95 | Mean squared tip jerk |
+|---|---|---|---|---|
+| 0 | **100%** | 1.14 s | 1.52 s | 278.3 m²/s⁶ |
+| 1 | **100%** | 1.16 s | 1.52 s | 278.2 m²/s⁶ |
+| 2 | **100%** | 1.18 s | 1.52 s | 279.7 m²/s⁶ |
+
+The jerk figure is the reference for SC-009 in P3 (learned must be ≤ 70% of it).
+
+### Findings and decisions during P2 (2026-09-26)
+
+- **Workspace**: over the full reachable set the baseline settled on only 77/100. Every failure was
+  behind the base, where the arm must fold back over itself (a local minimum for reactive IK).
+  Decision (user): the demo workspace is the **front of the base**, for the UI, evaluation and
+  training. The workspace grid excludes y > base − 2 cm.
+- **Out-of-reach limit cycle**: aiming at a far target drove the stretched arm into its
+  singularity, giving a 1.4 cm oscillation. Fix: the baseline aims at the nearest point it should
+  reach (front-workspace boundary, then the sphere at maxReach − 2 cm). Oscillation dropped to 0.13 mm,
+  with success unchanged. More damping also fixed it but cut success to 16–60%.
+- **Phone framing**: in portrait the default camera put the target off-screen (found by the
+  two-finger e2e test). The camera now fits the working area to any aspect ratio until the visitor
+  moves it.
+
+### Automated (2026-09-26), local production build
+
+| Check | desktop-chromium | mobile-chromium (4× CPU) | mobile-webkit |
+|---|---|---|---|
+| Time to interactive, 12 Mbit/s + 40 ms (SC-001) | 2.85–2.94 s ✓ | 2.92–2.95 s ✓ | n/a |
+| P1 suite (posing, limits, reset, fps) | ✓ | ✓ | ✓ |
+| Baseline mode by default; settles ≤ 1 cm within 2 s | ✓ | ✓ | ✓ |
+| 3 s circular drag followed (< 5 cm after 0.5 s, no stall) | ✓ | ✓ | ✓ |
+| Out of reach marked, arm still (< 1 mm), resumes after | ✓ (wheel) | ✓ (two-finger depth) | skipped (no multi-touch in WebKit) |
+| Joint grab → Manual; switch back to Baseline | ✓ | ✓ | ✓ |
+| Info panel shows the parity.json baseline values | ✓ | ✓ | ✓ |
+| Static-only requests (gate 3), now with target drag | ✓ | ✓ | ✓ |
+
+**Load-time headroom is now 50–80 ms** (P1: 150–200 ms). The payload is unchanged (3.08 MB gzip);
+parallelizing the workspace fetch did not help measurably, since transfer and WASM compile
+dominate. Treat any addition before interactive as needing a matching saving.
+
+Soak (SC-005), desktop Chromium, 10 min. The first P2 run passed but did not drag the target
+(action list gap). Target drags were added and it ran again: 602 s, 787 actions (131 target drags,
+about 30% of them far out of reach), max snapshot gap 68.5 ms, no limit breach, NaN or console
+error.
+
+### Manual
+
+- [ ] Real phone over LAN: drag the target (one finger), change depth (two fingers), watch the
+  baseline follow, check out-of-reach, open the info panel.
+- [ ] Public deploy once a remote exists (gate 4).
+
 ## P3

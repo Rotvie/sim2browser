@@ -33,14 +33,29 @@ export function createScene(canvas: HTMLCanvasElement): Scene {
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 20);
   camera.up.set(0, 0, 1);
-  camera.position.set(0.42, -0.62, 0.36);
+  /** The working area to keep in view: arm, base and the reachable space in front of it. */
+  const focus = new THREE.Sphere(new THREE.Vector3(0, -0.2, 0.14), 0.32);
+  const viewDir = new THREE.Vector3(0.42, -0.42, 0.22).normalize();
 
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, -0.2, 0.14);
+  controls.target.copy(focus.center);
   controls.enableDamping = true;
   controls.minDistance = 0.25;
   controls.maxDistance = 2.5;
   controls.maxPolarAngle = Math.PI * 0.49; // stay above the ground
+
+  // Frame the working area for the current aspect ratio (portrait phones need to back off
+  // further), until the visitor takes over the camera.
+  let userMovedCamera = false;
+  controls.addEventListener("start", () => (userMovedCamera = true));
+  const frame = () => {
+    const vfov = THREE.MathUtils.degToRad(camera.fov);
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+    const dist = focus.radius / Math.sin(Math.min(vfov, hfov) / 2);
+    camera.position.copy(focus.center).addScaledVector(viewDir, dist);
+    controls.target.copy(focus.center);
+  };
+  frame();
   controls.update();
 
   const resize = () => {
@@ -49,6 +64,7 @@ export function createScene(canvas: HTMLCanvasElement): Scene {
       renderer.setSize(w, h, false);
       camera.aspect = w / Math.max(h, 1);
       camera.updateProjectionMatrix();
+      if (!userMovedCamera) frame();
     }
   };
 

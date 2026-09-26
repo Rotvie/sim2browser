@@ -30,7 +30,7 @@ async function init(baseUrl: string) {
   try {
     // Download the engine and the robot files in parallel.
     const mjPromise = getMujoco();
-    const [mj, { parity, modelFiles }] = await Promise.all([
+    const [mj, { parity, modelFiles, workspace }] = await Promise.all([
       mjPromise,
       loadShared(
         read,
@@ -39,7 +39,7 @@ async function init(baseUrl: string) {
     ]);
     const sim = createSim(mj, parity, modelFiles);
     session?.sim.dispose();
-    session = createSession(sim, parity);
+    session = createSession(sim, parity, workspace);
     post({
       type: "ready",
       joints: parity.joints,
@@ -50,6 +50,7 @@ async function init(baseUrl: string) {
       geoms: sim.geoms(),
       neutralPose: parity.baseline.neutralPose,
       maxReach: parity.reach.maxReach,
+      baseline: parity.baseline,
       modes: (["manual", "baseline", "learned"] as const).filter((m) =>
         session!.modes.available(m),
       ),
@@ -78,6 +79,9 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
   switch (msg.type) {
     case "dragJoint":
       postModeChange(session.dragJoint(msg.joint, msg.angle));
+      break;
+    case "setTarget":
+      session.setTarget(msg.pos);
       break;
     case "setMode":
       postModeChange(session.setMode(msg.mode));

@@ -26,6 +26,9 @@ SUBSTEPS = 10
 CONTROL_HZ = 50
 DELTA_SCALE = 0.05
 MIN_Z = 0.01
+# Demo workspace = in front of the base (research R12): the tip must be at least this far in
+# front of the base axis (−y). Behind-the-base points need the arm folded back over itself.
+FRONT_MARGIN = 0.02
 VOXEL = 0.01
 REACH_SAMPLES = 200_000
 WORKSPACE_EXTRA_SAMPLES = 800_000
@@ -90,7 +93,7 @@ def base_parity(model: mujoco.MjModel) -> dict:
     max_reach = float(np.linalg.norm(reach_pts - shoulder, axis=1).max())
 
     ws_pts = np.concatenate([reach_pts, tip_samples(model, WORKSPACE_EXTRA_SAMPLES, rng)])
-    ws_pts = ws_pts[ws_pts[:, 2] >= MIN_Z]
+    ws_pts = ws_pts[(ws_pts[:, 2] >= MIN_Z) & (ws_pts[:, 1] <= base_axis[1] - FRONT_MARGIN)]
     grid, origin, dims = build_workspace(ws_pts)
     packed = np.packbits(grid.ravel(), bitorder="little")
     (SHARED / WORKSPACE_PATH).write_bytes(packed.tobytes())
@@ -125,6 +128,7 @@ def base_parity(model: mujoco.MjModel) -> dict:
             "margin": 0.01,
             "hysteresis": 0.005,
             "minZ": MIN_Z,
+            "frontMargin": FRONT_MARGIN,
             "baseAxisXY": base_axis.round(6).tolist(),
             "baseExclusionRadius": 0.05,
             "workspace": {
@@ -142,6 +146,7 @@ def base_parity(model: mujoco.MjModel) -> dict:
             "gain": 5.0,
             "maxJointSpeed": DELTA_SCALE * CONTROL_HZ,
             "nullspaceGain": 0.5,
+            "reachStandoff": 0.02,
             "neutralPose": neutral.round(6).tolist(),
         },
     }

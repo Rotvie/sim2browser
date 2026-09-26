@@ -28,7 +28,7 @@ the P1 soak test); rate-limited, the overshoot stays under 0.002 rad.
 | Field | Type | Notes |
 |-------|------|-------|
 | `pos` | float[3] | world position (m) |
-| `reachable` | bool | UI indicator: the target's voxel in the `reach.workspace` grid is occupied and z ≥ `minZ`; hysteresis = must be ≥ `hysteresis` inside or outside the reachable region (by distance to the nearest boundary voxel) before flipping |
+| `reachable` | bool | UI indicator: the target's voxel in the `reach.workspace` grid (front workspace only: tip y ≤ base y − `frontMargin`) is occupied and z ≥ `minZ`; hysteresis: the point and six probes `hysteresis` away along ±x/±y/±z must all agree before the flag flips |
 
 **Rules**: `pos` is clamped to z ≥ `minZ` and outside `baseExclusionRadius` around the base axis.
 Visual only (no collision). `reachable` is not a policy input.
