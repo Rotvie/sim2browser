@@ -222,3 +222,9 @@ assertions run in record-only mode when `CI` is set: the numbers are attached to
 report but do not block deploy. All functional e2e checks, parity, unit tests, evaluation and
 the size budget still gate the deploy. SC-001/SC-002 are verified locally (numbers above) and on
 a real phone (manual checks).
+
+First public CI runs: 42/43 e2e passed each time, with one hardware-bound failure per run:
+(1) the P1 posing scenario ran past the 60 s timeout under the 4× mobile throttle (now 180 s);
+(2) the circular-drag lag reached 5.3 cm against 5 cm on mobile Chromium, because the sim runs
+slower than real time on the runner while the drag follows the wall clock. CI now allows 8 cm;
+local and real-device runs keep 5 cm.

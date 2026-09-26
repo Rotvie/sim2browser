@@ -75,7 +75,13 @@ test.describe("P2: baseline reaches the target @p2", () => {
     const trace = await recording;
     expect(pt).not.toBeNull();
     const t0 = trace[0].t;
-    for (const s of trace.filter((s) => s.t - t0 > 0.5)) expect(tipToTarget(s)).toBeLessThan(0.05);
+    // The drag moves in wall-clock time; on a slow machine the sim runs slower than real time (by
+    // design), so the target moves faster per simulated second and the arm trails further. Real
+    // devices must stay within 5 cm; slow CI runners (4× mobile throttle) get 8 cm, which still
+    // fails if the arm does not follow.
+    const maxLag = process.env.CI ? 0.08 : 0.05;
+    for (const s of trace.filter((s) => s.t - t0 > 0.5))
+      expect(tipToTarget(s)).toBeLessThan(maxLag);
     const gaps = trace.slice(1).map((s, i) => s.t - trace[i].t);
     // Sim time between consecutive snapshots seen by the page: at most 5 control steps (100 ms).
     expect(Math.max(...gaps)).toBeLessThanOrEqual(0.1 + 1e-9);
