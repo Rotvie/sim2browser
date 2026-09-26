@@ -1,0 +1,32 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Node (web/)
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Python (train/)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Training outputs (exported artifacts live in shared/, which is tracked)
+train/runs/
+train/checkpoints/
+train/logs/
+*.zip
+
+# Env
+.env
+.env.*
