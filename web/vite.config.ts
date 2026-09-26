@@ -2,6 +2,7 @@ import { createReadStream, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { defineConfig, type Plugin } from "vite";
+import { servedPath } from "./src/sim/served";
 
 const BASE = "/sim2browser/";
 const SHARED = resolve(import.meta.dirname, "../shared");
@@ -43,7 +44,9 @@ function sharedAssets(): Plugin {
     name: "sim2browser-shared",
     configureServer(server) {
       server.middlewares.use(`${BASE}shared/`, (req, res, next) => {
-        const rel = decodeURIComponent((req.url ?? "").split("?")[0]).replace(/^\/+/, "");
+        const served = decodeURIComponent((req.url ?? "").split("?")[0]).replace(/^\/+/, "");
+        // Map served names back to source files (e.g. X.stl.bin -> X.stl; see src/sim/served.ts).
+        const rel = served.endsWith(".stl.bin") ? served.slice(0, -4) : served;
         const file = resolve(SHARED, rel);
         const inShipped = SHIPPED.some(
           (e) => file === join(SHARED, e) || file.startsWith(join(SHARED, e) + "/"),
@@ -84,7 +87,7 @@ function sharedAssets(): Plugin {
       for (const file of shippedFiles()) {
         this.emitFile({
           type: "asset",
-          fileName: `shared/${relative(SHARED, file)}`,
+          fileName: `shared/${servedPath(relative(SHARED, file))}`,
           source: readFileSync(file),
         });
       }

@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { brotliCompressSync, constants, gzipSync } from "node:zlib";
+import { servedPath } from "../src/sim/served";
 
 const BUDGET = 4 * 1024 * 1024;
 const DIST = new URL("../dist/", import.meta.url).pathname;
@@ -23,7 +24,7 @@ const parity = JSON.parse(readFileSync(join(DIST, "shared/parity.json"), "utf8")
 const fetchedShared = new Set<string>([
   "shared/parity.json",
   `shared/${parity.reach.workspace.path}`,
-  ...parity.model.files.map((f: string) => `shared/${f}`),
+  ...parity.model.files.map((f: string) => `shared/${servedPath(f)}`),
 ]);
 
 const rows = walk(DIST)

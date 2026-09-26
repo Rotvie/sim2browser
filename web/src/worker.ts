@@ -3,6 +3,7 @@
 import type { FromWorker, ToWorker } from "./protocol";
 import { createSim, getMujoco } from "./sim/mujoco";
 import { loadShared, ParityError, type ReadBytes } from "./sim/parity";
+import { servedPath } from "./sim/served";
 import { createSession, type ModeChange, type Session } from "./sim/session";
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -40,7 +41,7 @@ async function selectController(s: Session, id: string) {
 
 async function init(baseUrl: string) {
   read = async (path: string) => {
-    const res = await fetch(new URL(`shared/${path}`, baseUrl));
+    const res = await fetch(new URL(`shared/${servedPath(path)}`, baseUrl));
     if (!res.ok) throw Object.assign(new Error(`${path}: HTTP ${res.status}`), { assetLoad: true });
     return new Uint8Array(await res.arrayBuffer());
   };
