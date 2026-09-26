@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "mujocoVersion": "3.14.0",
+  "model": {
+    "path": "robot/so100_reach.xml",
+    "sha256": "b94fc274b980a1525ee4bc060e6d1e0d61fc33557db461af090662fa9dd4ed96",
+    "files": [
+      "robot/assets/Base.stl",
+      "robot/assets/Base_Motor.stl",
+      "robot/assets/Fixed_Jaw.stl",
+      "robot/assets/Fixed_Jaw_Motor.stl",
+      "robot/assets/Lower_Arm.stl",
+      "robot/assets/Lower_Arm_Motor.stl",
+      "robot/assets/Moving_Jaw.stl",
+      "robot/assets/Rotation_Pitch.stl",
+      "robot/assets/Rotation_Pitch_Motor.stl",
+      "robot/assets/Upper_Arm.stl",
+      "robot/assets/Upper_Arm_Motor.stl",
+      "robot/assets/Wrist_Pitch_Roll.stl",
+      "robot/assets/Wrist_Pitch_Roll_Motor.stl",
+      "robot/so100_reach.xml"
+    ]
+  },
+  "timestep": 0.002,
+  "substeps": 10,
+  "controlHz": 50,
+  "joints": [
+    "Rotation",
+    "Pitch",
+    "Elbow",
+    "Wrist_Pitch",
+    "Wrist_Roll"
+  ],
+  "tipSite": "tip",
+  "shoulderSite": "shoulder",
+  "action": {
+    "size": 5,
+    "low": -1.0,
+    "high": 1.0,
+    "deltaScale": 0.05
+  },
+  "observation": {
+    "size": 21,
+    "fields": [
+      {
+        "name": "q",
+        "size": 5,
+        "label": "Joint angles",
+        "unit": "rad"
+      },
+      {
+        "name": "qd",
+        "size": 5,
+        "label": "Joint speeds",
+        "unit": "rad/s"
+      },
+      {
+        "name": "target",
+        "size": 3,
+        "label": "Target position",
+        "unit": "m"
+      },
+      {
+        "name": "tipToTarget",
+        "size": 3,
+        "label": "Tip \u2192 target",
+        "unit": "m"
+      },
+      {
+        "name": "prevAction",
+        "size": 5,
+        "label": "Previous command",
+        "unit": ""
+      }
+    ]
+  },
+  "reach": {
+    "maxReach": 0.452128,
+    "margin": 0.01,
+    "hysteresis": 0.005,
+    "minZ": 0.01,
+    "baseAxisXY": [
+      0.0,
+      -0.0452
+    ],
+    "baseExclusionRadius": 0.05,
+    "workspace": {
+      "path": "workspace.bin",
+      "sha256": "e7f61e69a6d124834ebdd5dc77e6d03546f7bdba7193ee618b062f135e1ea371",
+      "origin": [
+        -0.461173,
+        -0.506139,
+        -0.01
+      ],
+      "voxel": 0.01,
+      "dims": [
+        93,
+        87,
+        57
+      ],
+      "layout": "x-fastest, bit-packed little-endian"
+    }
+  },
+  "success": {
+    "tolerance": 0.01,
+    "maxTipSpeed": 0.02,
+    "hold": 0.2,
+    "timeLimit": 2.0
+  },
+  "baseline": {
+    "damping": 0.05,
+    "gain": 5.0,
+    "maxJointSpeed": 2.5,
+    "nullspaceGain": 0.5,
+    "neutralPose": [
+      0.0,
+      -1.573,
+      1.483,
+      0.0,
+      0.0
+    ]
+  }
+}

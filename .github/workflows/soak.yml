@@ -1,0 +1,25 @@
+name: soak
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npx playwright test --grep "@soak" --project desktop-chromium
+        working-directory: web

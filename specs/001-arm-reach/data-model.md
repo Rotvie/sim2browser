@@ -18,7 +18,10 @@ The only persisted data are static build artifacts.
 | `tip` | float[3] | tip site world position (m) |
 
 **Rules**: `ctrl[i]` is always clipped to `limits[i]` (FR-005). Per-step change of `ctrl` is bounded
-(policy: `deltaScale`; baseline: `maxJointSpeed / controlHz`).
+for every controller (policy: `deltaScale`; baseline and manual: `maxJointSpeed / controlHz`, the
+same 0.05 rad). Manual posing moves `ctrl` toward the visitor's requested angle at that rate:
+instant jumps slam joints into MuJoCo's soft limits and overshoot them by up to 0.1 rad (found by
+the P1 soak test); rate-limited, the overshoot stays under 0.002 rad.
 
 ### Target
 

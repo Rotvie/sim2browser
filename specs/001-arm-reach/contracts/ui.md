@@ -49,4 +49,6 @@ One page (`index.html`), no routes. Covers FR-001–FR-017.
 
 ## Test hooks
 
-`window.__webRobot` (present in all builds, read-only): the latest worker snapshot plus `fps`. Playwright tests use it. It is not a public API.
+`window.__webRobot` (present in all builds, read-only): `snapshot` (latest worker snapshot), `ready`,
+`fps`, `maxFrameGapMs`, `resetFrameStats()`, `camera()`, `linkScreenPoint(bodyName)`, `bodyNames()`,
+`limits()`. Playwright tests use it. It is not a public API.

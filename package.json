@@ -1,0 +1,8 @@
+{
+  "name": "web-robot-root",
+  "private": true,
+  "workspaces": ["web"],
+  "scripts": {
+    "test:parity": "vitest run --config tests/parity/vitest.config.ts"
+  }
+}

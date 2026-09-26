@@ -57,7 +57,7 @@ No NEEDS CLARIFICATION remain. One open measurement: WASM binary size (R10).
 | II. Sim Parity | PASS | PASS | Same MuJoCo version; one XML; `parity.json` written only by training, read by everyone else; hash and version checks; `tests/parity` replay (1e-6 / 1e-5) blocks deploy. |
 | III. Every Rung Shippable | PASS | PASS | P1/P2 need no training (`export --no-policy`); each rung has its own e2e tag and deploy. |
 | IV. Learned vs. Engineered Visible | PASS | PASS | DLS IK baseline ships in P2; mode switch without reset; info panel documents the baseline design and shows the measured comparison, including shortfalls. |
-| V. Minimal | PASS | PASS | One arm, one page, one policy. Runtime dependencies: `@mujoco/mujoco`, three.js. No UI framework, no inference runtime. The worker is justified below. |
+| V. Minimal | PASS | PASS | One arm, one page, one policy. Runtime dependencies: `@mujoco/mujoco`, three.js. No UI framework, no inference runtime. The worker is justified below. Dev/tooling only (never shipped): Vite, TypeScript, Vitest, Playwright, ESLint, Prettier, tsx; Python pytest, ruff; mesh tooling `trimesh` + `fast-simplification` in an optional uv group. Shared assets are served/copied by a ~60-line Vite plugin instead of a copy plugin. |
 
 ## Project Structure
 

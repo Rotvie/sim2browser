@@ -37,7 +37,8 @@ Each entry: Decision / Rationale / Alternatives considered.
   same thing: the 5 position-actuator targets (`ctrl`). The policy outputs 5 values in [-1, 1],
   each scaled to a joint-target change of up to `deltaScale` rad per control step (starting value
   0.05), added to the current target and clipped to the joint range. The baseline writes the same
-  targets, with the same per-step change limit (its joint velocity limit).
+  targets, with the same per-step change limit (its joint velocity limit), and so does Manual
+  mode (visitor drags move the target at ≤ 2.5 rad/s; see data-model Arm rules).
 - **Rationale**: One control path for Manual, Baseline, and Learned means FR-013 holds by
   construction. Clipping enforces joint limits (FR-005) whatever the controller outputs.
 - **Alternatives considered**: torque control (harder to learn, awkward manual posing); absolute
@@ -127,7 +128,14 @@ Each entry: Decision / Rationale / Alternatives considered.
   deploys to GitHub Pages. Load budget: at most 4 MB compressed before interactive. Policy weights
   load lazily on first switch to Learned.
 - **Rationale**: About 4 MB loads in 3 s at about 12 Mbit/s (SC-001).
-- **Risk / open measurement**: The WASM binary size is unmeasured. The first implementation task
+- **Measured (2026-09-25, validation.md)**: 2.40 MB brotli / 3.08 MB gzip before interactive after
+  mesh decimation; time to interactive 2.78–2.90 s at 12 Mbit/s + 40 ms. It took three
+  mitigations to fit 3 s: (a) the engine and robot files download in parallel; (b) a small boot
+  script starts the worker before the three.js app chunk loads; (c) visual meshes decimated to
+  40% of faces (physics unchanged: explicit inertials, verified bit-identical). GitHub Pages
+  compresses with gzip only; whether it compresses `.wasm`/`.stl` must be checked on the first
+  public deploy.
+- **Original risk note**: The WASM binary size was unmeasured. The first implementation task
   measures it. Mitigations, in order: decimate meshes further; then show the arm posed from the
   model before physics is ready (a fallback only, because it adds a second code path).
 
