@@ -29,6 +29,9 @@ test.describe("P1: see and pose the arm @p1", () => {
   });
 
   test("orbit, pose, limits, smoothness", async ({ page }, info) => {
+    // Long scenario (10 s of continuous posing plus setup); slow CI runners with the 4× mobile CPU
+    // throttle need more than the default 60 s.
+    test.setTimeout(180_000);
     const errors = collectConsoleErrors(page);
     await page.goto("./");
     await waitReady(page);
