@@ -1,5 +1,5 @@
 {
-  "name": "web-robot-root",
+  "name": "sim2browser-root",
   "private": true,
   "workspaces": ["web"],
   "scripts": {

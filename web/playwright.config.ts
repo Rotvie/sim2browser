@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:4173/web-robot/",
+    baseURL: "http://localhost:4173/sim2browser/",
     trace: "retain-on-failure",
   },
   projects: [
@@ -17,7 +17,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run build && npm run preview -- --port 4173 --strictPort",
-    url: "http://localhost:4173/web-robot/",
+    url: "http://localhost:4173/sim2browser/",
     reuseExistingServer: true,
     timeout: 120_000,
   },

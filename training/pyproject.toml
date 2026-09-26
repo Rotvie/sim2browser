@@ -1,7 +1,7 @@
 [project]
 name = "reach"
 version = "0.1.0"
-description = "Offline training, export and parity fixtures for the web-robot reach demo"
+description = "Offline training, export and parity fixtures for the sim2browser reach demo"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "mujoco==3.14.0",

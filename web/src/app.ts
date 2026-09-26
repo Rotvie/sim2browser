@@ -190,7 +190,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   requestAnimationFrame(loop);
 
   // Read-only test hooks (contracts/ui.md); not a public API.
-  Object.defineProperty(window, "__webRobot", {
+  Object.defineProperty(window, "__sim2browser", {
     value: Object.freeze({
       get snapshot() {
         return latest;

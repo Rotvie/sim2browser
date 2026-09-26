@@ -31,9 +31,9 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
       __soak: { bad: string[]; lastT: number; lastAt: number; maxGap: number };
     };
     w.__soak = { bad: [], lastT: -1, lastAt: performance.now(), maxGap: 0 };
-    const limits = window.__webRobot.limits();
+    const limits = window.__sim2browser.limits();
     const check = () => {
-      const s = window.__webRobot.snapshot as unknown as {
+      const s = window.__sim2browser.snapshot as unknown as {
         t: number;
         q: Float64Array;
         tip: Float64Array;
@@ -74,7 +74,9 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
     } else if (r < 0.35) {
       // Target drag (P2 on), sometimes far enough to leave the reachable workspace.
       const pt = await page.evaluate(() =>
-        "targetScreenPoint" in window.__webRobot ? window.__webRobot.targetScreenPoint() : null,
+        "targetScreenPoint" in window.__sim2browser
+          ? window.__sim2browser.targetScreenPoint()
+          : null,
       );
       if (pt && pt[0] > 0 && pt[1] > 0 && pt[0] < vp.width && pt[1] < vp.height) {
         const far = rand() < 0.3 ? 3 : 1;
@@ -91,7 +93,7 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
       }
     } else if (r < 0.6) {
       const pt = await page.evaluate(
-        (l) => window.__webRobot.linkScreenPoint(l),
+        (l) => window.__sim2browser.linkScreenPoint(l),
         links[Math.floor(rand() * links.length)],
       );
       if (pt && pt[0] > 0 && pt[1] > 0 && pt[0] < vp.width && pt[1] < vp.height) {

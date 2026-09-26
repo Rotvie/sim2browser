@@ -13,8 +13,8 @@ test("only static same-origin GETs, no backend @p1 @p2 @p3", async ({ page, base
     const ok =
       req.method() === "GET" &&
       url.origin === origin &&
-      url.pathname.startsWith("/web-robot/") &&
-      (url.pathname === "/web-robot/" || STATIC.test(url.pathname));
+      url.pathname.startsWith("/sim2browser/") &&
+      (url.pathname === "/sim2browser/" || STATIC.test(url.pathname));
     if (!ok) bad.push(`${req.method()} ${req.url()}`);
   });
   await page.goto("./");
@@ -25,7 +25,7 @@ test("only static same-origin GETs, no backend @p1 @p2 @p3", async ({ page, base
   await page.getByRole("button", { name: "Baseline" }).click();
   // P3: switching to Learned loads the policy lazily, still as static files.
   await page.getByRole("button", { name: "Learned" }).click();
-  await page.waitForFunction(() => window.__webRobot.snapshot?.mode === "learned");
+  await page.waitForFunction(() => window.__sim2browser.snapshot?.mode === "learned");
   await page.getByRole("button", { name: "About the controllers" }).click();
   await page.waitForTimeout(500);
   expect(bad).toEqual([]);

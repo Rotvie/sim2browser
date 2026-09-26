@@ -1,6 +1,7 @@
-# web-robot
+# sim2browser
 
-A robot arm you can play with in your browser. A policy learned with reinforcement learning
+**Train in simulation, run a verified copy in the browser.** A robot arm you can play with in
+your browser. A policy learned with reinforcement learning
 controls it live: drag the blue target and the arm reaches for it. Switch to a classical
 controller at any moment and compare. No install and no server: MuJoCo physics, the neural
 network and the rendering all run in your browser tab.
@@ -122,7 +123,7 @@ Add it to `CONTROLLERS` in [`web/src/control/registry.ts`](web/src/control/regis
 
 ```bash
 cd web
-npm run dev                                                  # open …/web-robot/?lab
+npm run dev                                                  # open …/sim2browser/?lab
 npm run eval -- --controller baseline --n 100 --seed 0       # reference
 npm run eval -- --controller my-controller --n 100 --seed 0  # success, settle time, jerk
 npm run eval:compare -- --controller my-controller           # vs. the baseline
@@ -138,7 +139,7 @@ Requirements: Node 22+, Python 3.12 with [uv](https://docs.astral.sh/uv/).
 
 ```bash
 npm install                      # web + test tooling (npm workspaces)
-cd web && npm run dev            # http://localhost:5173/web-robot/
+cd web && npm run dev            # http://localhost:5173/sim2browser/
 ```
 
 Tests:

@@ -23,14 +23,14 @@ export interface Hook {
 
 declare global {
   interface Window {
-    __webRobot: Hook;
+    __sim2browser: Hook;
     __qTrace?: { stop: boolean; rows: { t: number; q: number[] }[] };
   }
 }
 
 export async function waitReady(page: Page, timeout = 20_000) {
   await page.waitForFunction(
-    () => window.__webRobot?.ready && window.__webRobot.snapshot !== null,
+    () => window.__sim2browser?.ready && window.__sim2browser.snapshot !== null,
     null,
     {
       timeout,
@@ -45,7 +45,7 @@ export async function startQTrace(page: Page) {
     window.__qTrace = trace;
     const rec = () => {
       if (trace.stop) return;
-      const s = window.__webRobot.snapshot as unknown as { t: number; q: Float64Array } | null;
+      const s = window.__sim2browser.snapshot as unknown as { t: number; q: Float64Array } | null;
       const last = trace.rows[trace.rows.length - 1];
       if (s && (!last || s.t !== last.t)) trace.rows.push({ t: s.t, q: Array.from(s.q) });
       requestAnimationFrame(rec);
@@ -64,7 +64,7 @@ export async function stopQTrace(page: Page): Promise<{ t: number; q: number[] }
 
 /** Drag from the middle of a link with small mouse steps, one per frame. */
 export async function dragLink(page: Page, link: string, dx: number, dy: number, steps: number) {
-  const pt = await page.evaluate((l) => window.__webRobot.linkScreenPoint(l), link);
+  const pt = await page.evaluate((l) => window.__sim2browser.linkScreenPoint(l), link);
   if (!pt) throw new Error(`no screen point for ${link}`);
   await page.mouse.move(pt[0], pt[1]);
   await page.mouse.down();
@@ -86,7 +86,7 @@ export function collectConsoleErrors(page: Page): string[] {
 
 /** Drag the target by (dx, dy) pixels with one mouse step per frame. */
 export async function dragTarget(page: Page, dx: number, dy: number, steps = 20) {
-  const pt = await page.evaluate(() => window.__webRobot.targetScreenPoint());
+  const pt = await page.evaluate(() => window.__sim2browser.targetScreenPoint());
   if (!pt) throw new Error("no target on screen");
   await page.mouse.move(pt[0], pt[1]);
   await page.mouse.down();

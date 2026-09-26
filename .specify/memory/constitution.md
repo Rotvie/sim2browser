@@ -1,6 +1,6 @@
-# web-robot Constitution
+# sim2browser Constitution
 
-web-robot is a robot arm you can play with in your browser. A learned policy controls it live:
+sim2browser (formerly web-robot) is a robot arm you can play with in your browser. A learned policy controls it live:
 you move a target and it reaches for it, you shove it and it recovers. No installs, no server,
 just a link.
 
@@ -108,4 +108,4 @@ shippable.
 - Compliance review: every `/speckit-plan` Constitution Check and every code review MUST verify
   adherence; `/speckit-analyze` findings that contradict the constitution are treated as blocking.
 
-**Version**: 1.0.1 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-25
+**Version**: 1.0.2 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-26

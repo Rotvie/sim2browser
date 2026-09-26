@@ -4,7 +4,7 @@ import { expect, test } from "./fixtures";
 type Snap = { t: number; tip: number[]; target: number[]; reachable: boolean; mode: string };
 const snap = (page: import("@playwright/test").Page) =>
   page.evaluate((): Snap => {
-    const s = window.__webRobot.snapshot!;
+    const s = window.__sim2browser.snapshot!;
     return { t: s.t, tip: [...s.tip], target: [...s.target], reachable: s.reachable, mode: s.mode };
   });
 
@@ -16,7 +16,7 @@ async function watch(page: import("@playwright/test").Page, ms: number): Promise
         const out: Snap[] = [];
         const end = performance.now() + ms;
         const rec = () => {
-          const s = window.__webRobot.snapshot!;
+          const s = window.__sim2browser.snapshot!;
           if (!out.length || out[out.length - 1].t !== s.t)
             out.push({
               t: s.t,
@@ -57,11 +57,11 @@ test.describe("P2: baseline reaches the target @p2", () => {
   });
 
   test("follows a continuous circular drag without stalls", async ({ page }) => {
-    const pt = (await page.evaluate(() => window.__webRobot.targetScreenPoint()))!;
+    const pt = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
     // Start the circle on a reachable point a little toward the base.
     await dragTarget(page, 60, 30);
     await page.waitForTimeout(1500);
-    const c = (await page.evaluate(() => window.__webRobot.targetScreenPoint()))!;
+    const c = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
     await page.mouse.move(c[0], c[1]);
     await page.mouse.down();
     const recording = watch(page, 3000);
@@ -93,7 +93,7 @@ test.describe("P2: baseline reaches the target @p2", () => {
     const touch =
       info.project.name === "mobile-chromium" ? await page.context().newCDPSession(page) : null;
     for (let i = 0; i < 30 && (await snap(page)).reachable; i++) {
-      const [x, y] = (await page.evaluate(() => window.__webRobot.targetScreenPoint()))!;
+      const [x, y] = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
       if (!touch) {
         await page.mouse.move(x, y);
         await page.mouse.wheel(0, -120);

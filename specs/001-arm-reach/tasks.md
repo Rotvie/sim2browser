@@ -15,6 +15,9 @@ spec's success criteria (SC-001–SC-009) and acceptance scenarios are verified 
 script and Playwright e2e tests defined in the plan (research R11). Test tasks come before the
 implementation they verify and are expected to fail first.
 
+**Naming**: the project was renamed from web-robot to **sim2browser** on 2026-09-26, before it was
+published. Completed task text keeps the original name as a record; open tasks use the new one.
+
 **Organization**: One phase per user story (P1 → P2 → P3). Each story ends in a public deploy
 (constitution Principle III).
 
@@ -116,7 +119,7 @@ loop, which every story builds on.
 - [X] T039 [P] [US1] Write `web/src/ui/hint.ts`: on first load, an animated hand/arrow over the upper-arm link (screen position computed from the link's world position each frame), removed on the first pointer interaction with the canvas; not shown again during that page session (`sessionStorage`, with reads and writes wrapped in try/catch) (FR-017)
 - [X] T040 [US1] Wire `picking.ts`, `resetButton.ts`, and `hint.ts` into `web/src/main.ts`; make controls usable in portrait and landscape phone layouts (touch targets ≥ 44 px) in `web/src/style.css`
 - [X] T041 [US1] (Triggered by SC-001, not the budget: time to interactive was 3.0–3.1 s before decimation while T030 stayed under 4 MB.) If T030 measured more than 4 MB, or the SC-001 load test fails: add `training/scripts/decimate_meshes.py` (e.g. `trimesh` or `open3d` quadric decimation, visual meshes only, target ≤ 40% of faces), regenerate `shared/robot/assets/`, re-run `export --no-policy` (the model hash changes; `<inertial>` elements keep physics unchanged, and `tests/parity/engine.test.ts` must still pass), and re-run `npm run size`. If still over, record it in `validation.md` and open a follow-up for the kinematic-posing fallback (plan Complexity Tracking); do not build that fallback here
-- [ ] T042 [US1] Make `web/tests/e2e/p1.spec.ts`, the `@soak` run, and all unit tests pass; deploy locally with `npm run build && npm run preview -- --host` (production build under `/web-robot/`); check manually on a real phone over the LAN (orbit, pinch, pose every joint) and record the device, load time, and observations under "P1" in `specs/001-arm-reach/validation.md`. When a GitHub remote with Pages exists: push to `main` and confirm the public deploy. The rung counts as complete only then (constitution gate 4)
+- [ ] T042 [US1] Make `web/tests/e2e/p1.spec.ts`, the `@soak` run, and all unit tests pass; deploy locally with `npm run build && npm run preview -- --host` (production build under `/sim2browser/`); check manually on a real phone over the LAN (orbit, pinch, pose every joint) and record the device, load time, and observations under "P1" in `specs/001-arm-reach/validation.md`. When a GitHub remote with Pages exists: push to `main` and confirm the public deploy. The rung counts as complete only then (constitution gate 4)
 
 **Checkpoint**: P1 is live at the public URL. This is the first shippable rung and can be recorded as a video on its own.
 

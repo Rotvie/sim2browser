@@ -3,7 +3,7 @@ import { extname, join, relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { defineConfig, type Plugin } from "vite";
 
-const BASE = "/web-robot/";
+const BASE = "/sim2browser/";
 const SHARED = resolve(import.meta.dirname, "../shared");
 /** Runtime assets served to the page. Parity fixtures and tooling files stay out of the build. */
 const SHIPPED = ["parity.json", "workspace.bin", "robot", "policy"];
@@ -40,7 +40,7 @@ function shippedFiles(): string[] {
 /** Serves ../shared at <base>shared/ in dev and copies it into dist/shared/ on build. */
 function sharedAssets(): Plugin {
   return {
-    name: "web-robot-shared",
+    name: "sim2browser-shared",
     configureServer(server) {
       server.middlewares.use(`${BASE}shared/`, (req, res, next) => {
         const rel = decodeURIComponent((req.url ?? "").split("?")[0]).replace(/^\/+/, "");

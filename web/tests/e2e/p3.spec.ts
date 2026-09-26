@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { collectConsoleErrors, dragTarget, tipToTarget, waitReady } from "./helpers";
 import { expect, test } from "./fixtures";
 
-const mode = (page: Page) => page.evaluate(() => window.__webRobot.snapshot!.mode);
+const mode = (page: Page) => page.evaluate(() => window.__sim2browser.snapshot!.mode);
 const selectLearned = async (page: Page) => {
   await page.getByRole("button", { name: "Learned" }).click();
   await expect.poll(() => mode(page), { timeout: 10_000 }).toBe("learned");
@@ -19,13 +19,13 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     const errors = collectConsoleErrors(page);
     await selectLearned(page);
     await dragTarget(page, 70, 50);
-    expect(await page.evaluate(() => window.__webRobot.snapshot!.reachable)).toBe(true);
+    expect(await page.evaluate(() => window.__sim2browser.snapshot!.reachable)).toBe(true);
     const reached = await page.evaluate(
       () =>
         new Promise<boolean>((resolve) => {
           const end = performance.now() + 2000;
           const check = () => {
-            const s = window.__webRobot.snapshot!;
+            const s = window.__sim2browser.snapshot!;
             const d = Math.hypot(
               s.tip[0] - s.target[0],
               s.tip[1] - s.target[1],
@@ -50,13 +50,13 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     await page.waitForTimeout(150); // mid-reach
     for (const next of ["Baseline", "Learned", "Baseline"]) {
       const before = await page.evaluate(() => {
-        const s = window.__webRobot.snapshot!;
+        const s = window.__sim2browser.snapshot!;
         return { t: s.t, q: [...s.q], target: [...s.target] };
       });
       await page.getByRole("button", { name: next }).click();
       await expect.poll(() => mode(page)).toBe(next.toLowerCase());
       const after = await page.evaluate(() => {
-        const s = window.__webRobot.snapshot!;
+        const s = window.__sim2browser.snapshot!;
         return { t: s.t, q: [...s.q], target: [...s.target] };
       });
       expect(after.target).toEqual(before.target);
@@ -65,7 +65,9 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
       const dt = after.t - before.t;
       after.q.forEach((v, j) => expect(Math.abs(v - before.q[j])).toBeLessThan(2.6 * dt + 0.02));
     }
-    expect(tipToTarget(await page.evaluate(() => window.__webRobot.snapshot!))).toBeLessThan(0.5);
+    expect(tipToTarget(await page.evaluate(() => window.__sim2browser.snapshot!))).toBeLessThan(
+      0.5,
+    );
   });
 
   test("the policy view updates live while dragging", async ({ page }) => {
@@ -75,7 +77,7 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     await expect(panel).toBeVisible();
     await expect(panel).toContainText("Joint angles");
     await expect(panel).toContainText("joint 5 command");
-    const pt = (await page.evaluate(() => window.__webRobot.targetScreenPoint()))!;
+    const pt = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
     await page.mouse.move(pt[0], pt[1]);
     await page.mouse.down();
     const seen = new Set<string>();

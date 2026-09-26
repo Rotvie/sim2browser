@@ -35,26 +35,26 @@ test.describe("P1: see and pose the arm @p1", () => {
     await page.waitForTimeout(500);
 
     // (b) dragging empty space orbits the camera
-    const cam0 = await page.evaluate(() => window.__webRobot.camera());
+    const cam0 = await page.evaluate(() => window.__sim2browser.camera());
     await page.mouse.move(60, 200);
     await page.mouse.down();
     await page.mouse.move(160, 240, { steps: 10 });
     await page.mouse.up();
     await page.waitForTimeout(300);
-    const cam1 = await page.evaluate(() => window.__webRobot.camera());
+    const cam1 = await page.evaluate(() => window.__sim2browser.camera());
     expect(cam0.some((v, i) => Math.abs(v - cam1[i]) > 1e-3)).toBe(true);
 
     // Reset the view angle influence: reload for a known camera.
     await page.reload();
     await waitReady(page);
     await page.waitForTimeout(500);
-    const limits = await page.evaluate(() => window.__webRobot.limits());
+    const limits = await page.evaluate(() => window.__sim2browser.limits());
 
     // (c) dragging the upper arm moves its joint (Pitch, index 1)
-    const qBefore = await page.evaluate(() => Array.from(window.__webRobot.snapshot!.q));
+    const qBefore = await page.evaluate(() => Array.from(window.__sim2browser.snapshot!.q));
     await dragLink(page, "Upper_Arm", 40, 0, 10);
     await page.waitForTimeout(600);
-    const qAfter = await page.evaluate(() => Array.from(window.__webRobot.snapshot!.q));
+    const qAfter = await page.evaluate(() => Array.from(window.__sim2browser.snapshot!.q));
     expect(Math.abs(qAfter[1] - qBefore[1])).toBeGreaterThan(0.05);
 
     // (d) dragging far past a limit holds the joint at its limit, with no teleports: joint speed
@@ -82,8 +82,8 @@ test.describe("P1: see and pose the arm @p1", () => {
     expect(maxSpeed).toBeLessThanOrEqual(4);
 
     // (e) 10 s of continuous posing stays smooth (SC-002)
-    await page.evaluate(() => window.__webRobot.resetFrameStats());
-    const pt = await page.evaluate(() => window.__webRobot.linkScreenPoint("Lower_Arm"));
+    await page.evaluate(() => window.__sim2browser.resetFrameStats());
+    const pt = await page.evaluate(() => window.__sim2browser.linkScreenPoint("Lower_Arm"));
     await page.mouse.move(pt![0], pt![1]);
     await page.mouse.down();
     const tEnd = Date.now() + 10_000;
@@ -95,8 +95,8 @@ test.describe("P1: see and pose the arm @p1", () => {
     }
     await page.mouse.up();
     const { fps, maxFrameGapMs } = await page.evaluate(() => ({
-      fps: window.__webRobot.fps,
-      maxFrameGapMs: window.__webRobot.maxFrameGapMs,
+      fps: window.__sim2browser.fps,
+      maxFrameGapMs: window.__sim2browser.maxFrameGapMs,
     }));
     info.annotations.push({ type: "fps", description: fps.toFixed(1) });
     info.annotations.push({ type: "max-frame-gap-ms", description: maxFrameGapMs.toFixed(1) });
@@ -113,12 +113,12 @@ test.describe("P1: see and pose the arm @p1", () => {
     await page.goto("./");
     await waitReady(page);
     await page.waitForTimeout(300);
-    const q0 = await page.evaluate(() => Array.from(window.__webRobot.snapshot!.q));
+    const q0 = await page.evaluate(() => Array.from(window.__sim2browser.snapshot!.q));
     await dragLink(page, "Upper_Arm", 80, 0, 10);
     await page.waitForTimeout(800);
     await page.getByRole("button", { name: "Reset" }).click();
     await page.waitForTimeout(300);
-    const q1 = await page.evaluate(() => Array.from(window.__webRobot.snapshot!.q));
+    const q1 = await page.evaluate(() => Array.from(window.__sim2browser.snapshot!.q));
     q1.forEach((v, j) => expect(Math.abs(v - q0[j])).toBeLessThan(0.02));
   });
 });

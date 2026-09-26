@@ -2,7 +2,7 @@
  * First-visit hint (FR-017): an animated marker on the part to drag, gone after the first
  * interaction and not shown again during the page session.
  */
-const KEY = "web-robot:interacted";
+const KEY = "sim2browser:interacted";
 
 function seen(): boolean {
   try {
