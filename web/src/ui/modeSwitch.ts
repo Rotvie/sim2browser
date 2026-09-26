@@ -10,6 +10,8 @@ const LABELS: Record<ControlMode, string> = {
 export interface ModeSwitch {
   /** Reflect the worker's mode (from snapshots or modeChanged). */
   show(mode: ControlMode): void;
+  /** Learned is loading its policy (spinner) or failed to load (disabled with a reason). */
+  learnedState(state: "idle" | "loading" | "failed", reason?: string): void;
 }
 
 export function createModeSwitch(
@@ -39,6 +41,15 @@ export function createModeSwitch(
       if (mode === current) return;
       current = mode;
       for (const [m, b] of buttons) b.setAttribute("aria-pressed", String(m === mode));
+      if (mode === "learned") this.learnedState("idle");
+    },
+    learnedState(state, reason) {
+      const b = buttons.get("learned");
+      if (!b) return;
+      b.classList.toggle("loading", state === "loading");
+      b.setAttribute("aria-busy", String(state === "loading"));
+      b.disabled = state === "failed";
+      b.title = state === "failed" ? `The learned policy could not be loaded: ${reason ?? ""}` : "";
     },
   };
 }

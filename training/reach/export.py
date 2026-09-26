@@ -6,6 +6,8 @@ uv run python -m reach.export --no-policy      # P1/P2: no training needed
 from __future__ import annotations
 
 import argparse
+import json
+from pathlib import Path
 
 import mujoco
 import numpy as np
@@ -152,18 +154,83 @@ def base_parity(model: mujoco.MjModel) -> dict:
     }
 
 
+POLICY_BIN = "policy/reach.bin"
+POLICY_JSON = "policy/reach.json"
+RUNS = SHARED.parent / "training" / "runs"
+
+
+def policy_layers(model) -> list[tuple[np.ndarray, np.ndarray]]:
+    """(W out x in, b) for each layer of the deterministic actor: 2 hidden tanh + linear."""
+    net = model.policy.mlp_extractor.policy_net
+    linears = [m for m in net if hasattr(m, "weight")] + [model.policy.action_net]
+    return [
+        (m.weight.detach().cpu().numpy().astype(np.float64), m.bias.detach().cpu().numpy())
+        for m in linears
+    ]
+
+
+def export_policy(parity: dict, run: Path) -> dict:
+    """Write normalization into parity, and shared/policy/reach.{bin,json}."""
+    import pickle
+
+    from stable_baselines3 import PPO
+
+    model = PPO.load(run / "model.zip", device="cpu")
+    with open(run / "vecnormalize.pkl", "rb") as f:
+        vecnorm = pickle.load(f)
+    rms = vecnorm.obs_rms
+    size = parity["observation"]["size"]
+    if rms.mean.shape != (size,):
+        raise SystemExit(f"run observation size {rms.mean.shape} != parity.json {size}")
+    parity["observation"]["normalization"] = {
+        "mean": rms.mean.tolist(),
+        "std": np.sqrt(rms.var + vecnorm.epsilon).tolist(),
+        "clip": float(vecnorm.clip_obs),
+        "eps": float(vecnorm.epsilon),
+    }
+
+    layers = policy_layers(model)
+    blob = b"".join(np.concatenate([w.ravel(), b]).astype("<f4").tobytes() for w, b in layers)
+    (SHARED / "policy").mkdir(exist_ok=True)
+    (SHARED / POLICY_BIN).write_bytes(blob)
+    config = json.loads((run / "config.json").read_text())
+    header = {
+        "format": 1,
+        "parityVersion": parity["version"],
+        "activation": "tanh",
+        "outputActivation": "clip",
+        "layers": [{"in": int(w.shape[1]), "out": int(w.shape[0])} for w, _ in layers],
+        "dtype": "float32-le",
+        "sha256": sha256_file(SHARED / POLICY_BIN),
+        "trainedWith": {
+            "algo": "PPO",
+            "steps": config["steps"],
+            "seed": config["seed"],
+            "run": run.name,
+            "reward": config["reward"],
+        },
+    }
+    (SHARED / POLICY_JSON).write_text(json.dumps(header, indent=2) + "\n")
+    parity["policy"] = {"path": POLICY_BIN, "header": POLICY_JSON, "sha256": header["sha256"]}
+    return parity
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-policy", action="store_true", help="write parity.json without a policy")
+    ap.add_argument("--run", type=str, help="training run id under training/runs/")
     args = ap.parse_args()
-    if not args.no_policy:
-        raise SystemExit("policy export is implemented in P3 (tasks T060); use --no-policy")
+    if not args.no_policy and not args.run:
+        raise SystemExit("pass --run <id> (or --no-policy)")
     model = load_model()
     parity = base_parity(model)
+    if not args.no_policy:
+        parity = export_policy(parity, RUNS / args.run)
     write_parity(parity)
     print(
         f"wrote shared/parity.json: maxReach={parity['reach']['maxReach']:.3f} m, "
         f"workspace dims={parity['reach']['workspace']['dims']}"
+        + (f", policy from {args.run}" if args.run else "")
     )
 
 

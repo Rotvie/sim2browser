@@ -9,6 +9,7 @@ export interface Hook {
     target: Float64Array;
     reachable: boolean;
     mode: string;
+    policyStep?: { obsRaw: Float64Array; action: Float64Array };
   } | null;
   fps: number;
   maxFrameGapMs: number;

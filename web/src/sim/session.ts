@@ -3,8 +3,10 @@
  * Node tests and evaluation drive exactly the code the worker runs.
  */
 import { createBaselineController } from "../control/baseline";
+import { createLearnedController, type LearnedController } from "../control/learned";
 import { createManualController } from "../control/manual";
 import { ModeMachine, type ControlMode, type ModeChangeReason } from "../control/modes";
+import type { Policy } from "../control/policy";
 import type { Snapshot } from "../protocol";
 import { createArm, type Arm } from "./arm";
 import { createClock, type Clock } from "./clock";
@@ -23,6 +25,10 @@ export interface Session {
   readonly parity: Parity;
   readonly modes: ModeMachine;
   readonly target: Target;
+  /** Register the learned controller once its policy is loaded and verified. */
+  addPolicy(policy: Policy): void;
+  /** The learned policy failed to load: fall back to baseline if it was selected. */
+  policyFailed(): ModeChange | null;
   dragJoint(i: number, angle: number): ModeChange | null;
   setMode(mode: ControlMode): ModeChange | null;
   setTarget(pos: ArrayLike<number>): void;
@@ -49,6 +55,7 @@ export function createSession(sim: Sim, parity: Parity, workspace: Uint8Array): 
   );
   const baseline = createBaselineController({ sim, arm, parity, target: () => target.pos });
   const modes = new ModeMachine({ manual, baseline });
+  let learned: LearnedController | null = null;
   const clock: Clock = createClock({ controlHz: parity.controlHz });
 
   const controlStep = () => {
@@ -62,6 +69,14 @@ export function createSession(sim: Sim, parity: Parity, workspace: Uint8Array): 
     parity,
     modes,
     target,
+    addPolicy(policy) {
+      learned = createLearnedController({ sim, arm, parity, policy, target: () => target.pos });
+      modes.register("learned", learned);
+    },
+    policyFailed() {
+      learned = null;
+      return modes.policyLoadFailed() ? { mode: modes.mode, reason: "policy-load-failed" } : null;
+    },
     dragJoint(i, angle) {
       const change = modes.jointGrab() ? { mode: modes.mode, reason: "joint-grab" as const } : null;
       manual.setGoal(i, angle);
@@ -105,6 +120,9 @@ export function createSession(sim: Sim, parity: Parity, workspace: Uint8Array): 
         target: Float64Array.from(target.pos),
         reachable: target.reachable,
         mode: modes.mode,
+        policyStep: learned
+          ? ((modes.mode === "learned" ? learned.last() : null) ?? learned.peek())
+          : undefined,
       };
     },
   };

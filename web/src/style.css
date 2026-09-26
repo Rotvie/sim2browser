@@ -63,6 +63,8 @@ body {
 }
 
 .toolbar {
+  flex-wrap: wrap;
+  justify-content: center;
   position: absolute;
   left: 50%;
   bottom: max(16px, env(safe-area-inset-bottom));
@@ -244,7 +246,7 @@ body {
 .panel {
   position: absolute;
   right: 16px;
-  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px);
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--toolbar-h, 56px) + 12px);
   width: min(360px, calc(100vw - 32px));
   max-height: calc(100dvh - 160px);
   overflow: auto;
@@ -339,5 +341,143 @@ body {
     left: 16px;
     right: 16px;
     width: auto;
+  }
+}
+
+.segmented button.loading::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 6px;
+  border: 2px solid rgba(29, 35, 43, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -1px;
+}
+
+.segmented button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.panel.observe {
+  left: 16px;
+  right: auto;
+  width: min(340px, calc(100vw - 32px));
+}
+
+.panel.observe.inactive .output {
+  opacity: 0.45;
+}
+
+.panel .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.obs-group h3 {
+  margin: 10px 0 2px;
+  font-size: 13px;
+}
+
+.obs-row {
+  display: grid;
+  grid-template-columns: 7.5em 1fr 4.5em;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.obs-row .num {
+  grid-column: 3;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(29, 35, 43, 0.08);
+}
+
+.bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--from, 50%);
+  right: calc(100% - var(--to, 50%));
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.bar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: rgba(29, 35, 43, 0.3);
+}
+
+.panel .ok {
+  color: #15803d;
+}
+
+.panel .miss {
+  color: #b45309;
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: max(64px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #1d232b;
+  color: #ffffff;
+  font-size: 14px;
+  z-index: 20;
+}
+
+@media (max-width: 700px) {
+  .panel.observe {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: 45dvh;
+  }
+}
+
+/* Narrow screens: mode switch on its own row, compact buttons below (2 rows instead of 3). */
+@media (max-width: 520px) {
+  .toolbar {
+    row-gap: 6px;
+  }
+  .toolbar .segmented {
+    flex-basis: 100%;
+    justify-content: center;
+  }
+  .toolbar .btn[data-short] {
+    font-size: 0;
+    padding: 0 12px;
+  }
+  .toolbar .btn[data-short]::after {
+    content: attr(data-short);
+    font-size: 15px;
+  }
+  .panel.observe {
+    max-height: 38dvh;
   }
 }

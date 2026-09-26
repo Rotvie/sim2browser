@@ -66,6 +66,16 @@ Each entry: Decision / Rationale / Alternatives considered.
   workspace, and about 10% are out of reach. The policy is an MLP with 2 hidden layers of 128
   units (tanh), about 20k parameters; the output is the linear Gaussian mean, clipped to
   [-1, 1] (SB3 default, no tanh squashing).
+- **As trained (P3, see the validation.md training log)**: the planned reward did not learn. It
+  needed (1) a curriculum ramping the smoothness penalties from 0 to full over the first half of
+  training, because otherwise exploration jerk dominates and the policy learns to stay still;
+  (2) a precision term w·(1 − tanh(d/scale)), sharpened to 1 cm, for the last centimeter;
+  (3) a joint-speed penalty so joints that do not move the tip (Wrist_Roll) do not spin;
+  (4) far more samples than planned (tens of millions of steps, 12 parallel envs, about 20k
+  steps/s on CPU); (5) exploration std e^−1. Targets change instantly or glide over 0.5–1.5 s
+  (like a drag); half the episodes start from a random pose; unreachable targets are half beyond
+  reach and half behind the base. Weights live in `training/reach/config.py` and are recorded
+  per run in `reach.json` `trainedWith`.
 - **Rationale**: Smoothness is learned from the reward, not scripted (FR-016). Mid-episode target
   changes cover dragging. Training on unreachable targets gives sane stretching behavior.
 - **Alternatives considered**: SAC (often jittery without extra work); MJX parallel PPO (R1).

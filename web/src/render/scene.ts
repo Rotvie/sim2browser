@@ -7,6 +7,11 @@ export interface Scene {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
+  /**
+   * Pixels at the bottom of the canvas covered by UI (e.g. a bottom sheet). The view is centred
+   * in the uncovered part, so the arm stays visible above the sheet.
+   */
+  setBottomInset(px: number): void;
   render(): void;
 }
 
@@ -58,14 +63,21 @@ export function createScene(canvas: HTMLCanvasElement): Scene {
   frame();
   controls.update();
 
+  let size = { w: 0, h: 0, inset: 0 };
+  let inset = 0;
   const resize = () => {
     const { clientWidth: w, clientHeight: h } = canvas;
-    if (canvas.width !== Math.floor(w * renderer.getPixelRatio())) {
-      renderer.setSize(w, h, false);
-      camera.aspect = w / Math.max(h, 1);
-      camera.updateProjectionMatrix();
-      if (!userMovedCamera) frame();
-    }
+    if (w === size.w && h === size.h && inset === size.inset) return;
+    if (w !== size.w || h !== size.h) renderer.setSize(w, h, false);
+    size = { w, h, inset };
+    // Project for the visible area (h - inset) and draw it into the full canvas: the extra rows
+    // at the bottom continue the same view underneath the covering UI.
+    const visible = Math.max(1, h - inset);
+    camera.aspect = w / visible;
+    if (inset > 0) camera.setViewOffset(w, visible, 0, 0, w, h);
+    else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+    if (!userMovedCamera) frame();
   };
 
   return {
@@ -73,6 +85,9 @@ export function createScene(canvas: HTMLCanvasElement): Scene {
     scene,
     camera,
     controls,
+    setBottomInset(px) {
+      inset = Math.max(0, Math.round(px));
+    },
     render() {
       resize();
       controls.update();

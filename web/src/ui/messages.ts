@@ -4,6 +4,8 @@ export interface Messages {
   error(text: string, retry: () => void): void;
   unsupported(missing: string[]): void;
   hide(): void;
+  /** A short non-blocking notice that disappears by itself. */
+  toast(text: string): void;
 }
 
 export function createMessages(root: HTMLElement): Messages {
@@ -49,6 +51,14 @@ export function createMessages(root: HTMLElement): Messages {
     },
     hide() {
       el.hidden = true;
+    },
+    toast(text) {
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.setAttribute("role", "alert");
+      t.textContent = text;
+      root.appendChild(t);
+      setTimeout(() => t.remove(), 6000);
     },
   };
 }

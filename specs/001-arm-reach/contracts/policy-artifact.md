@@ -17,12 +17,15 @@ Written by `training/reach/export.py` from the trained SB3 policy.
   ],
   "dtype": "float32-le",
   "sha256": "<hex of reach.bin>",
-  "trainedWith": { "algo": "PPO", "steps": 0, "seed": 0, "gitRev": "<rev>" },
-  "metrics": { "successRate": 0.0, "jerkRatioVsBaseline": 0.0 }
+  "trainedWith": { "algo": "PPO", "steps": 0, "seed": 0, "run": "<run id>",
+                   "reward": { "<term>": 0.0 } },
+  "metrics": { "successRate": 0.0, "jerkRatioVsBaseline": 0.0, "baselineSuccessRate": 0.0,
+               "n": 300, "seed": 0 }
 }
 ```
 
-`metrics` is filled in from the Node evaluation after export. The info panel shows it
+`metrics` is written by `npm run eval:compare -- --write-metrics` from the Node evaluation after
+export (the shipped build uses n = 300). The info panel shows it as measured, including misses
 (honest reporting, research R12).
 
 ## Binary `reach.bin`

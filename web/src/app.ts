@@ -10,6 +10,7 @@ import { createHint } from "./ui/hint";
 import { createInfoPanel } from "./ui/infoPanel";
 import type { Messages } from "./ui/messages";
 import { createModeSwitch, type ModeSwitch } from "./ui/modeSwitch";
+import { createObservePanel, type ObservePanel } from "./ui/panel";
 import { createResetButton } from "./ui/resetButton";
 
 export interface AppContext {
@@ -46,6 +47,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   const canvas = document.getElementById("view") as HTMLCanvasElement;
   const toolbar = document.getElementById("toolbar")!;
   const view = createScene(canvas);
+  // Panels sit above the toolbar, whose height changes when it wraps on narrow screens.
+  new ResizeObserver(() =>
+    document.documentElement.style.setProperty("--toolbar-h", `${toolbar.offsetHeight}px`),
+  ).observe(toolbar);
   const send = (msg: ToWorker) => worker.postMessage(msg);
   const interp = new PoseInterpolator();
   const stats = new FrameStats();
@@ -55,6 +60,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   let arm: ReturnType<typeof createArmView> | null = null;
   let target: TargetView | null = null;
   let modeSwitch: ModeSwitch | null = null;
+  let observe: ObservePanel | null = null;
 
   const bodyIndex = (name: string) => ready?.bodyNames.indexOf(name) ?? -1;
   const bodyPos = (b: number): THREE.Vector3 | null =>
@@ -105,10 +111,21 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           send: (joint, angle) => send({ type: "dragJoint", joint, angle }),
           onInteract: () => hint.dismiss(),
         });
-        modeSwitch = createModeSwitch(toolbar, msg.modes, (mode) =>
-          send({ type: "setMode", mode }),
+        modeSwitch = createModeSwitch(toolbar, msg.modes, (mode) => {
+          if (mode === "learned" && latest?.mode !== "learned" && !latest?.policyStep) {
+            modeSwitch?.learnedState("loading");
+          }
+          send({ type: "setMode", mode });
+        });
+        const hasPolicy = msg.modes.includes("learned");
+        if (hasPolicy) observe = createObservePanel(app, toolbar, msg.observation, msg.joints);
+        createInfoPanel(
+          app,
+          toolbar,
+          msg.baseline,
+          msg.observation.map((f) => f.label),
+          hasPolicy ? new URL("shared/policy/reach.json", document.baseURI).href : null,
         );
-        createInfoPanel(app, toolbar, msg.baseline);
         messages.hide();
         break;
       }
@@ -119,6 +136,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         break;
       case "modeChanged":
         modeSwitch?.show(msg.mode);
+        break;
+      case "policyError":
+        modeSwitch?.learnedState("failed", msg.message);
+        messages.toast("The learned policy could not be loaded, so the baseline stays in control.");
         break;
       case "error":
         messages.error(msg.message, () => {
@@ -145,6 +166,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
     const pose = interp.sample(now);
     if (arm && pose) arm.setPose(pose);
     target?.update();
+    if (latest) observe?.update(latest.policyStep, latest.mode);
+    // On narrow screens the policy panel is a bottom sheet: keep the arm above it.
+    const sheet = window.innerWidth < 700 ? observe?.openElement() : null;
+    view.setBottomInset(sheet ? canvas.clientHeight - sheet.getBoundingClientRect().top : 0);
     hint.place(target?.screenPoint() ?? null);
     view.render();
     requestAnimationFrame(loop);

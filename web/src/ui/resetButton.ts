@@ -4,6 +4,8 @@ export function createResetButton(toolbar: HTMLElement, onReset: () => void): HT
   button.type = "button";
   button.className = "btn";
   button.textContent = "Reset";
+  button.dataset.short = "↺";
+  button.setAttribute("aria-label", "Reset");
   button.title = "Return the arm to its starting pose";
   button.addEventListener("click", onReset);
   toolbar.appendChild(button);

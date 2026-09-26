@@ -10,9 +10,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { parseArgs } from "node:util";
 import type { ControlMode } from "../src/control/modes";
+import { loadPolicy } from "../src/control/policy";
 import { meanSqJerk, reachableTargets, runEpisode } from "../src/sim/eval";
 import { createSession } from "../src/sim/session";
-import { loadNodeSim } from "../tests/node-shared";
+import { loadNodeSim, readShared } from "../tests/node-shared";
 
 const { values } = parseArgs({
   options: {
@@ -32,6 +33,7 @@ const out = values.out ?? new URL(`../eval/${controller}.json`, import.meta.url)
 
 const { sim, parity, workspace } = await loadNodeSim();
 const session = createSession(sim, parity, workspace);
+if (controller === "learned") session.addPolicy(await loadPolicy(readShared, parity));
 const targets = reachableTargets(sim, parity, n, seed);
 
 const perTarget = [];

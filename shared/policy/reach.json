@@ -1,0 +1,43 @@
+{
+  "format": 1,
+  "parityVersion": 1,
+  "activation": "tanh",
+  "outputActivation": "clip",
+  "layers": [
+    {
+      "in": 21,
+      "out": 128
+    },
+    {
+      "in": 128,
+      "out": 128
+    },
+    {
+      "in": 128,
+      "out": 5
+    }
+  ],
+  "dtype": "float32-le",
+  "sha256": "6fa17d4675e746a76a90e044340ea6aabc7b0df6d47c2fcf01cfaa94abd3d772",
+  "trainedWith": {
+    "algo": "PPO",
+    "steps": 30000000,
+    "seed": 1,
+    "run": "r4-sharper",
+    "reward": {
+      "distance": 1,
+      "success_bonus": 0.5,
+      "precision": 1,
+      "precision_scale": 0.01,
+      "action_rate": 0.02,
+      "jerk": 0.0002
+    }
+  },
+  "metrics": {
+    "successRate": 0.9466666666666667,
+    "jerkRatioVsBaseline": 0.672,
+    "baselineSuccessRate": 1,
+    "n": 300,
+    "seed": 0
+  }
+}

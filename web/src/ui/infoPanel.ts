@@ -2,12 +2,15 @@
  * "About the controllers" panel (research R6 honesty note). Values come from parity.json, so the
  * panel describes exactly the baseline that runs and gets evaluated.
  */
+import type { PolicyHeader } from "../control/policy";
 import type { Parity } from "../sim/parity";
 
 export function createInfoPanel(
   root: HTMLElement,
   toolbar: HTMLElement,
   baseline: Parity["baseline"],
+  observed: string[],
+  policyHeaderUrl: string | null,
 ): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -40,14 +43,52 @@ export function createInfoPanel(
     <p class="note">A controller that plans a smooth trajectory ahead of time would also move
       smoothly; this demo compares reactive controllers.</p>
     <p class="note">The arm works in front of its base. Targets it cannot reach are shown in orange;
-      it stretches toward them and stops.</p>`;
+      it stretches toward them and stops.</p>
+    <div class="learned-info" hidden></div>`;
   root.appendChild(panel);
+
+  // The learned-policy section loads its facts from the shipped policy header on first open, so
+  // the numbers shown are exactly the measured ones (research R12), even when below target.
+  const learnedInfo = panel.querySelector<HTMLElement>(".learned-info")!;
+  let loaded = false;
+  const loadLearned = async () => {
+    if (loaded || !policyHeaderUrl) return;
+    loaded = true;
+    try {
+      const h = (await (await fetch(policyHeaderUrl)).json()) as PolicyHeader;
+      const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+      const m = h.metrics;
+      const results = m
+        ? `<dl>
+            <dt>Reached target</dt><dd>${pct(m.successRate)} <span class="${m.successRate >= 0.95 ? "ok" : "miss"}">(target ≥ 95%)</span></dd>
+            <dt>Tip jerk vs baseline</dt><dd>${(m.jerkRatioVsBaseline * 100).toFixed(0)}% <span class="${m.jerkRatioVsBaseline <= 0.7 ? "ok" : "miss"}">(target ≤ 70%)</span></dd>
+          </dl>
+          <p class="note">Measured on ${m.n ?? 100} random reachable targets, 1 cm tolerance,
+            within 2 s. Numbers are shown as measured, including any shortfall.</p>`
+        : `<p class="note">Not measured yet.</p>`;
+      learnedInfo.innerHTML = `
+        <h3>Learned policy</h3>
+        <p>A neural network (${h.layers.length - 1} hidden layers of ${h.layers[0].out}) trained with
+          PPO reinforcement learning in the same simulation. Every 20 ms it sees
+          ${observed.join(", ").toLowerCase()} and outputs a change for each joint target.</p>
+        <p>Its training reward: get the tip close to the target (with a bonus for settling), while
+          penalizing sudden changes in its commands and jerky tip motion. Smoothness is learned,
+          not scripted.</p>
+        <h3>Measured results</h3>${results}`;
+      learnedInfo.hidden = false;
+    } catch {
+      loaded = false;
+    }
+  };
 
   const set = (open: boolean) => {
     panel.hidden = !open;
     button.setAttribute("aria-expanded", String(open));
   };
-  button.addEventListener("click", () => set(panel.hidden !== false));
+  button.addEventListener("click", () => {
+    set(panel.hidden !== false);
+    if (!panel.hidden) void loadLearned();
+  });
   panel.querySelector(".close")!.addEventListener("click", () => set(false));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") set(false);

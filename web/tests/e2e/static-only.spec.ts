@@ -23,7 +23,10 @@ test("only static same-origin GETs, no backend @p1 @p2 @p3", async ({ page, base
   await page.getByRole("button", { name: "Reset" }).click();
   await dragTarget(page, 80, 40); // P2
   await page.getByRole("button", { name: "Baseline" }).click();
-  // P3 adds a Learned switch here.
+  // P3: switching to Learned loads the policy lazily, still as static files.
+  await page.getByRole("button", { name: "Learned" }).click();
+  await page.waitForFunction(() => window.__webRobot.snapshot?.mode === "learned");
+  await page.getByRole("button", { name: "About the controllers" }).click();
   await page.waitForTimeout(500);
   expect(bad).toEqual([]);
 });

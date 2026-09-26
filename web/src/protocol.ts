@@ -25,6 +25,8 @@ export interface Snapshot {
   target: Float64Array;
   reachable: boolean;
   mode: ControlMode;
+  /** Present once the policy is loaded; in other modes it shows what the policy would do. */
+  policyStep?: import("./control/learned").PolicyStep;
 }
 
 export interface ReadyInfo {
@@ -40,6 +42,8 @@ export interface ReadyInfo {
   modes: ControlMode[];
   /** Baseline design parameters, shown in the info panel (parity.json `baseline`). */
   baseline: import("./sim/parity").Parity["baseline"];
+  /** Observation fields (labels for the panel). */
+  observation: import("./sim/parity").Parity["observation"]["fields"];
 }
 
 export type ErrorCode = ParityErrorCode | "asset-load" | "internal";
@@ -48,4 +52,6 @@ export type FromWorker =
   | ({ type: "ready" } & ReadyInfo)
   | ({ type: "snapshot" } & Snapshot)
   | { type: "modeChanged"; mode: ControlMode; reason: ModeChangeReason }
-  | { type: "error"; code: ErrorCode; message: string };
+  | { type: "error"; code: ErrorCode; message: string }
+  /** The learned policy could not be loaded or verified; the page keeps running on Baseline. */
+  | { type: "policyError"; message: string };

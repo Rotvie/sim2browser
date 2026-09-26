@@ -131,3 +131,86 @@ error.
 - [ ] Public deploy once a remote exists (gate 4).
 
 ## P3
+
+### Training log (T064; at most 5 tuning rounds, baseline never changed)
+
+Proxy numbers from `training/reach/evaluate.py` (Python, 100 front-workspace targets, same
+success protocol). The number of record is the web evaluation below.
+
+| Run | Change | Steps | Success | Jerk ratio | Notes |
+|---|---|---|---|---|---|
+| r1 | reward as planned (R5), full penalties from start | 3.5M (stopped) | — | — | mean distance stuck at 0.30 m: exploration jerk made the penalties dominate, so the policy learned to stay still |
+| r2a / r2b | penalty curriculum / penalties ÷10 | 2.4M each (stopped) | — | — | distance stuck around 0.19 m in both. A sanity run (no penalties, one target, fixed start) did learn (60% within 1 cm at 2M), so no bug, just a hard, slow task |
+| **r3** (round 1) | + precision term w·(1 − tanh(d/2 cm)), curriculum over 50%, 12 envs | 40M | 74% | 0.58 | 80% end within 1 cm, 15% stall at 1–2 cm: needs a sharper precision signal. Wrist_Roll spins at 1.1 rad/s on average (the tip cannot see it) |
+| r4 (round 2) | resume r3; precision weight 1.0, scale 1 cm; full penalties | +30M | 95% | 0.65 | 5M: 90%, 10M: 89%, 15M: 85%, 20M: 86%, 25M: 94%, 30M: 96%. Both targets met on the proxy, narrowly. Wrist_Roll still spins at 1.06 rad/s |
+| r5 (round 3) | resume r4; + joint-speed penalty 0.005·‖q̇‖² | +20M | 92% | 0.71 | 5M: 97%/0.68, 10M: 96%/0.63, 15M: 96%/0.67, 20M: 92%/0.71. Wrist_Roll unchanged (1.02 rad/s); the penalty is too weak to matter. Trace: the roll command gets no reward signal, so it saturates early and then drifts to the limit |
+| r6 (round 4) | resume r4; joint speed 0.005 + posture 0.01·‖q − neutral‖² + effort 0.01·‖a‖² | +20M | 92% | 0.77 | 5M: 97%/0.70, 10M: 98%/0.75, 15M: 93%/0.75, 20M: 92%/0.77. Roll drift halved (ends near 1.6 instead of 2.8 rad) but still opens with full wrist commands: the resumed policy keeps its round-1 habit |
+| r7 (round 5, last) | from scratch with the complete reward (precision 1 cm, joint speed, posture, effort; curriculum 50%) | 60M | 0% | 0.21 | never learned to reach: with posture and effort present from the start, staying near the neutral pose was optimal (the same failure mode as r1). Jerk is low because the arm barely moves |
+
+**Selection** (all 5 rounds used). Candidates were compared on a fresh set of 300 targets
+(Python proxy, seed 999) that is not used for reporting: r4 final 94% / 0.62, r5@5M 93% / 0.66,
+r5@10M 92% / 0.58, r6@5M 94% / 0.68. **Chosen: r4-sharper (round 2 final)**, tied for best
+success and with the best jerk ratio among those that pass SC-009.
+
+### Result of record (web evaluation: shipped TypeScript policy on the WASM sim)
+
+| Targets | Learned success (SC-004 ≥ 95%) | Jerk ratio (SC-009 ≤ 0.70) | Settle p50 learned / baseline |
+|---|---|---|---|
+| 100 (seed 0, the SC definition, CI) | **96.0% PASS** | **0.653 PASS** | 1.12 s / 1.14 s |
+| 300 (seed 0, larger sample) | **94.7% MISS** (284/300) | **0.672 PASS** | 1.14 s / 1.12 s |
+| 100 (seed 1) / 100 (seed 2) | 92% / 92% | 0.612 / 0.629 | |
+
+**Honest summary**: smoothness (SC-009) is met robustly: the learned tip jerk is 61–67% of the
+baseline's on every target set. Success (SC-004) is met on the 100-target set the spec defines
+but is about 94–95% on larger samples, i.e. at the threshold rather than clearly above it. The
+info panel shows the 300-target numbers (94.7%, 67%), including the miss. The baseline was
+never changed (FR-018).
+
+**Known artifact**: the policy moves Wrist_Roll (mean 1.0 rad/s), a joint that does not move the
+tip, so neither the reward nor the metrics see it. Rounds 3–5 tried joint-speed, posture and
+effort penalties: resuming could not unlearn it, and training from scratch with them failed to
+reach. Visually the gripper rotates while reaching. Candidate fix for a later feature: remove
+Wrist_Roll from the policy's action space (hold it at neutral, as the baseline effectively does).
+That changes the parity contract (action size 4), so it needs retraining and new fixtures.
+
+### Parity with the final policy
+
+`npm run test:parity`: 6/6 pass (versions and hashes, 3 trajectory replays ≤ 1e-6, observation
+≤ 1e-6 and policy ≤ 1e-5). Measured with r3: trajectories 1.4e-14, observations 5.8e-15, actions
+2.8e-7.
+
+Web evaluation of r4 (number of record for the current fallback): seed 0: 96% / 0.653, seed 1:
+92% / 0.612, seed 2: 92% / 0.629; pooled over 300 targets: **93.3%** success. SC-004 passes on
+seed 0 only.
+
+Web evaluation of r3 (TypeScript policy on WASM, the number of record): success 79%, jerk ratio
+0.564, settle p50 1.22 s (baseline 1.14 s).
+
+### Parity (Principle II, release gate)
+
+With the r3 export: `npm run test:parity`, 6/6 pass. Measured worst-case differences:
+trajectory replays |Δqpos, qvel| ≤ 1.4e-14 (tolerance 1e-6); observations 5.8e-15 (1e-6);
+policy actions 2.8e-7 (1e-5; float32 weights).
+
+### Automated (final policy)
+
+- Unit 38/38, training 14/14, parity 6/6, lint and format clean.
+- E2E P1+P2+P3 and static-only: 40 passed, 2 skipped (WebKit: no CDP throttling, no multi-touch)
+  on desktop Chromium, mobile Chromium (4× CPU) and mobile WebKit. P3 covers: learned settles
+  ≤ 1 cm within 2 s; switching mid-reach keeps the target and moves joints no faster than the
+  2.5 rad/s limit allows in the elapsed sim time; the policy view updates live; measured results
+  are shown; a corrupted `reach.bin` falls back to Baseline with a notice.
+- Load budget unchanged: 2.40 MB brotli / 3.09 MB gzip before interactive (the policy, 80 KB,
+  loads only when Learned is first selected).
+- Soak, 10 min with Learned in the mode rotation: 601 s, 718 actions (169 target drags), max
+  snapshot gap 123.8 ms, no limit breach, NaN or console error.
+- Phone layout fixes found while testing P3: the policy view is a bottom sheet above the toolbar,
+  and the 3D view shifts up (camera view offset) so the arm stays visible above it; the toolbar is
+  2 rows on narrow screens; the view now updates on height-only resizes.
+
+### Manual (P3)
+
+- [ ] Real phone over LAN: switch Learned ↔ Baseline mid-drag, open "Policy view" (bottom sheet,
+  arm stays visible above it), open the info panel and check the measured results.
+- [ ] 5-visitor test for SC-006 / SC-007 (T081), after the public deploy.
+- [ ] Public deploy once a remote exists (gate 4).
