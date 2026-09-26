@@ -6,7 +6,8 @@ controls it live: drag the blue target and the arm reaches for it. Switch to a c
 controller at any moment and compare. No install and no server: MuJoCo physics, the neural
 network and the rendering all run in your browser tab.
 
-**Live demo:** _link coming with the first GitHub Pages deploy_ <!-- TODO: add the Pages URL -->
+**Live demo: [rotvie.github.io/sim2browser](https://rotvie.github.io/sim2browser/)** (add `?lab` for the
+example plug-in controller)
 
 ![Baseline, then the learned policy, reaching the same targets; then the policy view](docs/media/demo.gif)
 

@@ -232,3 +232,21 @@ local and real-device runs keep 5 cm. (3) A third run failed the snapshot-gap ch
 that slow. Root cause for all three: the 4× CPU throttle stacked on an already slow runner.
 The mobile-chromium throttle is now applied on development machines only (where it is
 calibrated); in CI that project checks viewport, touch and layout.
+
+## Public deploy (2026-09-26): https://rotvie.github.io/sim2browser/
+
+Constitution gate 4 is met for P1–P3 (public URL). CI: all jobs green (web, training, parity,
+e2e, deploy) after the three runner-only fixes above.
+
+Live measurement, cold cache, 12 Mbit/s + 40 ms latency (the SC-001 profile):
+
+| Run | Time to interactive |
+|---|---|
+| desktop, 1st load after deploy (CDN cold) | 3.09 s |
+| desktop, 2nd / 3rd | 2.76 s / 2.60 s |
+| phone profile (Pixel 7, 4× CPU) | 2.68 s |
+
+Found on the live site and fixed: GitHub Pages served the `.stl` meshes uncompressed (MIME type
+`application/vnd.ms-pki.stl`), so time to interactive was 3.58 s. They are now served as `.stl.bin`
+(octet-stream, gzipped; Base mesh 177 KB → 73 KB) with identical bytes, so hashes and parity are
+unchanged. The WASM (2.58 MB gzip) was compressed from the start.
