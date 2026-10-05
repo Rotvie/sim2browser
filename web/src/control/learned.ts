@@ -1,6 +1,7 @@
 /**
  * Learned controller: observation → normalize → MLP → joint-target change, exactly as in training
- * (training/reach/env.py step).
+ * (training/reach/env.py step). The policy observes and moves only parity.json `action.joints`;
+ * the other joints (Wrist_Roll) keep their targets.
  */
 import type { Arm } from "../sim/arm";
 import type { Sim } from "../sim/mujoco";
@@ -34,14 +35,16 @@ export function createLearnedController(opts: {
   const norm = parity.observation.normalization;
   if (!norm) throw new Error("parity.json has no observation normalization");
   const deltaScale = parity.action.deltaScale;
-  let prevAction = new Float64Array(sim.nu);
+  const idx = parity.action.joints.map((j) => parity.joints.indexOf(j));
+  const pick = (v: ArrayLike<number>) => idx.map((i) => v[i]);
+  let prevAction = new Float64Array(idx.length);
   let last: PolicyStep | null = null;
 
   const evaluate = (): PolicyStep => {
     const obsRaw = buildObs(
       {
-        q: sim.q(),
-        qd: sim.qd(),
+        q: pick(sim.q()),
+        qd: pick(sim.qd()),
         target: opts.target(),
         tip: sim.sitePos(parity.tipSite),
         prevAction,
@@ -59,12 +62,13 @@ export function createLearnedController(opts: {
 
   return {
     enter() {
-      prevAction = new Float64Array(sim.nu);
+      prevAction = new Float64Array(idx.length);
       last = null;
     },
     step() {
       const s = evaluate();
-      const delta = s.action.map((a) => a * deltaScale);
+      const delta = new Float64Array(sim.nu);
+      idx.forEach((j, i) => (delta[j] = s.action[i] * deltaScale));
       arm.applyDelta(delta, deltaScale);
       prevAction = Float64Array.from(s.action);
       last = s;

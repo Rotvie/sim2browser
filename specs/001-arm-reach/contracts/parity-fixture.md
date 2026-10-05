@@ -14,7 +14,7 @@ on any failure.
   "init": { "qpos": [...], "qvel": [...], "ctrl": [...], "target": [x, y, z] },
   "targetChanges": [ { "step": 120, "target": [x, y, z] } ],
   "steps": [
-    { "action": [5], "obsRaw": [21], "obsNorm": [21], "policyAction": [5],
+    { "action": [n], "obsRaw": [18], "obsNorm": [18], "policyAction": [4],
       "qpos": [...], "qvel": [...] }
   ]
 }
@@ -26,6 +26,9 @@ on any failure.
 2. `trajectory-limits.json`: actions saturated against joint limits.
 3. `policy-recorded.json`: observations recorded while the trained policy runs (3 target changes,
    one unreachable), with the training policy's actions.
+
+`action` has one entry per joint (`joints`) in the trajectory fixtures and one per
+`action.joints` in the policy fixture.
 
 ## Assertions
 

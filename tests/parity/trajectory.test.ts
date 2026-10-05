@@ -18,12 +18,16 @@ describe.each([
     sim.setCtrl(fx.init.ctrl);
     const arm = createArm(sim);
     const ds = parity.action.deltaScale;
+    // Policy fixtures record one action per action.joints; trajectory fixtures one per joint.
+    const idx =
+      fx.kind === "policy"
+        ? parity.action.joints.map((j) => parity.joints.indexOf(j))
+        : parity.joints.map((_, i) => i);
     let worst = 0;
     fx.steps.forEach((step, k) => {
-      arm.applyDelta(
-        step.action.map((a) => a * ds),
-        ds,
-      );
+      const delta = new Array(sim.nu).fill(0);
+      idx.forEach((j, i) => (delta[j] = step.action[i] * ds));
+      arm.applyDelta(delta, ds);
       sim.stepPhysics(parity.substeps);
       const [dq, iq] = maxDiff(sim.data.qpos as Float64Array, step.qpos);
       const [dv, iv] = maxDiff(sim.data.qvel as Float64Array, step.qvel);

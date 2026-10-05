@@ -37,7 +37,7 @@ def test_byte_length_and_hash():
     assert blob.nbytes == expected
     assert sha256_file(SHARED / parity["policy"]["path"]) == parity["policy"]["sha256"]
     assert header["sha256"] == parity["policy"]["sha256"]
-    assert [(la["in"], la["out"]) for la in header["layers"]] == [(21, 128), (128, 128), (128, 5)]
+    assert [(la["in"], la["out"]) for la in header["layers"]] == [(18, 128), (128, 128), (128, 4)]
 
 
 def test_forward_matches_sb3():
@@ -51,7 +51,7 @@ def test_forward_matches_sb3():
         pytest.skip(f"training run {run.name} not available locally")
     model = PPO.load(run / "model.zip", device="cpu")
     rng = np.random.default_rng(0)
-    obs = rng.normal(size=(1000, 21)).clip(-10, 10)
+    obs = rng.normal(size=(1000, 18)).clip(-10, 10)
     ours = np.array([forward(layers, o) for o in obs])
     theirs, _ = model.predict(obs.astype(np.float32), deterministic=True)
     np.testing.assert_allclose(ours, theirs, atol=1e-6)

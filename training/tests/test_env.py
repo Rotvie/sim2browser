@@ -14,30 +14,33 @@ def env():
 
 def test_observation_layout(env):
     obs, _ = env.reset(seed=1)
-    assert obs.shape == (21,)
+    assert obs.shape == (18,)
     fields = [(f["name"], f["size"]) for f in env.parity["observation"]["fields"]]
-    assert fields == [("q", 5), ("qd", 5), ("target", 3), ("tipToTarget", 3), ("prevAction", 5)]
-    np.testing.assert_array_equal(obs[0:5], env.q())
-    np.testing.assert_array_equal(obs[5:10], env.qd())
-    np.testing.assert_array_equal(obs[10:13], env.target)
-    np.testing.assert_allclose(obs[13:16], env.target - env.tip(), atol=1e-15)
-    np.testing.assert_array_equal(obs[16:21], np.zeros(5))
+    assert fields == [("q", 4), ("qd", 4), ("target", 3), ("tipToTarget", 3), ("prevAction", 4)]
+    assert env.parity["action"]["joints"] == ["Rotation", "Pitch", "Elbow", "Wrist_Pitch"]
+    np.testing.assert_array_equal(obs[0:4], env.q()[:4])
+    np.testing.assert_array_equal(obs[4:8], env.qd()[:4])
+    np.testing.assert_array_equal(obs[8:11], env.target)
+    np.testing.assert_allclose(obs[11:14], env.target - env.tip(), atol=1e-15)
+    np.testing.assert_array_equal(obs[14:18], np.zeros(4))
 
 
 def test_action_application_and_substeps(env):
     env.reset(seed=2)
     ctrl0 = env.data.ctrl.copy()
-    a = np.array([1.0, -1.0, 0.5, 0.0, -0.25], dtype=np.float32)
+    a = np.array([1.0, -1.0, 0.5, -0.25], dtype=np.float32)
     ref = mujoco.MjData(env.model)
     mujoco.mj_copyData(ref, env.model, env.data)
     obs, *_ = env.step(a)
-    expected_ctrl = np.clip(ctrl0 + a.astype(np.float64) * 0.05, env.lim[:, 0], env.lim[:, 1])
+    full = np.append(a.astype(np.float64), 0.0)  # Wrist_Roll is held
+    expected_ctrl = np.clip(ctrl0 + full * 0.05, env.lim[:, 0], env.lim[:, 1])
     np.testing.assert_array_equal(env.data.ctrl, expected_ctrl)
+    assert env.data.ctrl[4] == ctrl0[4]
     ref.ctrl[:] = expected_ctrl
     for _ in range(env.parity["substeps"]):
         mujoco.mj_step(env.model, ref)
     np.testing.assert_array_equal(env.data.qpos, ref.qpos)
-    np.testing.assert_array_equal(obs[16:21], a.astype(np.float64))
+    np.testing.assert_array_equal(obs[14:18], a.astype(np.float64))
 
 
 def test_apply_action_clips_to_limits():

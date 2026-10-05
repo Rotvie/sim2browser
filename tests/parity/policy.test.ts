@@ -17,7 +17,9 @@ describe("policy-recorded.json", () => {
     const arm = createArm(sim);
     const ds = parity.action.deltaScale;
     let target = fx.init.target;
-    let prev = new Array(sim.nu).fill(0);
+    const idx = parity.action.joints.map((j) => parity.joints.indexOf(j));
+    const pick = (v: ArrayLike<number>) => idx.map((i) => v[i]);
+    let prev = new Array(idx.length).fill(0);
     let worstObs = 0;
     let worstAct = 0;
     fx.steps.forEach((step, k) => {
@@ -25,8 +27,8 @@ describe("policy-recorded.json", () => {
       if (change) target = change.target;
       const obsRaw = buildObs(
         {
-          q: sim.q(),
-          qd: sim.qd(),
+          q: pick(sim.q()),
+          qd: pick(sim.qd()),
           target,
           tip: sim.sitePos(parity.tipSite),
           prevAction: prev,
@@ -49,10 +51,9 @@ describe("policy-recorded.json", () => {
       worstObs = Math.max(worstObs, dr, dn);
       worstAct = Math.max(worstAct, da);
       // Replay the recorded action so both sides stay on the same trajectory.
-      arm.applyDelta(
-        step.action.map((a) => a * ds),
-        ds,
-      );
+      const delta = new Array(sim.nu).fill(0);
+      idx.forEach((j, i) => (delta[j] = step.action[i] * ds));
+      arm.applyDelta(delta, ds);
       sim.stepPhysics(parity.substeps);
       prev = step.action;
     });

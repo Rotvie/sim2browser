@@ -80,7 +80,8 @@ export function createInfoPanel(
         <h3>Learned policy</h3>
         <p>A neural network (${h.layers.length - 1} hidden layers of ${h.layers[0].out}) trained with
           PPO reinforcement learning in the same simulation. Every 20 ms it sees
-          ${observed.join(", ").toLowerCase()} and outputs a change for each joint target.</p>
+          ${observed.join(", ").toLowerCase()} and outputs a change for each joint target. It
+          leaves the wrist roll alone: rolling the wrist does not move the tip.</p>
         <p>Its training reward: get the tip close to the target (with a bonus for settling), while
           penalizing sudden changes in its commands and jerky tip motion. Smoothness is learned,
           not scripted.</p>

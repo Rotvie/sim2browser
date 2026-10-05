@@ -69,6 +69,7 @@ async function init(baseUrl: string) {
       neutralPose: parity.baseline.neutralPose,
       maxReach: parity.reach.maxReach,
       baseline: parity.baseline,
+      policyJoints: parity.action.joints,
       observation: parity.observation.fields,
       controllers: session.controllers.map(({ id, label, description, public: pub }) => ({
         id,

@@ -38,7 +38,7 @@ def init_state(env: ReachEnv, q: np.ndarray, target: np.ndarray) -> dict:
     env.data.ctrl[:] = q
     mujoco.mj_forward(env.model, env.data)
     env.target = clamp_target(target, env.reach)
-    env.prev_action = np.zeros(env.n)
+    env.prev_action = np.zeros(env.na)
     return {
         "qpos": env.data.qpos.tolist(),
         "qvel": env.data.qvel.tolist(),
@@ -84,7 +84,9 @@ def policy_recorded(env: ReachEnv, p: dict, run: str) -> dict:
             env.target = clamp_target(change_at[k], env.reach)
             changes.append({"step": k, "target": env.target.tolist()})
         tip = env.data.site_xpos[env.tip_id].copy()
-        obs_raw = build_obs(p, env.q(), env.qd(), env.target, tip, env.prev_action)
+        obs_raw = build_obs(
+            p, env.q()[env.act], env.qd()[env.act], env.target, tip, env.prev_action
+        )
         obs_norm = np.clip(
             (obs_raw - mean) / np.maximum(std, norm["eps"]), -norm["clip"], norm["clip"]
         )
@@ -100,7 +102,7 @@ def policy_recorded(env: ReachEnv, p: dict, run: str) -> dict:
                 "policyAction": action.tolist(),
             }
         )
-        physics_step(env, action)
+        physics_step(env, env.expand(action))
         env.prev_action = action
         steps[-1]["qpos"] = env.data.qpos.tolist()
         steps[-1]["qvel"] = env.data.qvel.tolist()

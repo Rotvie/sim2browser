@@ -45,6 +45,8 @@ export interface ReadyInfo {
   controllers: { id: string; label: string; description: string; public: boolean }[];
   /** Baseline design parameters, shown in the info panel (parity.json `baseline`). */
   baseline: import("./sim/parity").Parity["baseline"];
+  /** Joints the policy observes and commands (parity.json `action.joints`). */
+  policyJoints: string[];
   /** Observation fields (labels for the panel). */
   observation: import("./sim/parity").Parity["observation"]["fields"];
 }

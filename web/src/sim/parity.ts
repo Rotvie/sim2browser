@@ -21,7 +21,8 @@ export interface Parity {
   joints: string[];
   tipSite: string;
   shoulderSite: string;
-  action: { size: number; low: number; high: number; deltaScale: number };
+  /** The policy's action: one entry per `action.joints` (a subset of `joints`). */
+  action: { size: number; joints: string[]; low: number; high: number; deltaScale: number };
   observation: {
     size: number;
     fields: ObsField[];
@@ -57,7 +58,7 @@ export interface Parity {
   policy?: { path: string; header: string; sha256: string };
 }
 
-export const PARITY_VERSION = 1;
+export const PARITY_VERSION = 2;
 
 export type ParityErrorCode = "version-mismatch" | "hash-mismatch" | "invalid";
 
@@ -101,8 +102,11 @@ export function validateParity(p: Parity, mujocoVersion: string): void {
   if (fieldSum !== p.observation.size) {
     throw new ParityError("invalid", "observation.size must equal the sum of field sizes");
   }
-  if (p.action.size !== p.joints.length) {
-    throw new ParityError("invalid", "action.size must equal the number of joints");
+  if (!p.action.joints.every((j) => p.joints.includes(j))) {
+    throw new ParityError("invalid", "action.joints must be a subset of joints");
+  }
+  if (p.action.size !== p.action.joints.length) {
+    throw new ParityError("invalid", "action.size must equal the number of action.joints");
   }
 }
 

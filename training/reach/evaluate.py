@@ -17,7 +17,7 @@ import mujoco
 import numpy as np
 from stable_baselines3 import PPO
 
-from .env import ReachEnv, clamp_target
+from .env import ReachEnv, apply_action, clamp_target
 from .export import RUNS
 
 BASELINE_JERK = 278.3  # web/eval/baseline.json, seed 0 (m²/s⁶)
@@ -51,17 +51,15 @@ def evaluate(model, vecnorm, n: int, seed: int) -> dict:
         env.data.ctrl[:] = env.neutral
         mujoco.mj_forward(env.model, env.data)
         env.target = clamp_target(target, env.reach)
-        env.prev_action = np.zeros(env.n)
+        env.prev_action = np.zeros(env.na)
         trace = []
         obs = env.obs()
         for _ in range(steps):
             a, _ = model.predict(
                 vecnorm.normalize_obs(obs[None]).astype(np.float32), deterministic=True
             )
-            env.data.ctrl[:] = np.clip(
-                env.data.ctrl + np.clip(a[0] * env.delta_scale, -env.delta_scale, env.delta_scale),
-                env.lim[:, 0],
-                env.lim[:, 1],
+            env.data.ctrl[:] = apply_action(
+                env.data.ctrl.copy(), env.expand(a[0]), env.delta_scale, env.lim
             )
             for _ in range(env.substeps):
                 mujoco.mj_step(env.model, env.data)

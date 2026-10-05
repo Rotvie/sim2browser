@@ -1,6 +1,6 @@
 /**
  * "What the policy sees" panel (FR-014, contracts/ui.md): the live observation, grouped and
- * labelled from parity.json, and the policy's 5 outputs. Collapsed by default; a bottom sheet on
+ * labelled from parity.json, and the policy's outputs (one per parity.json `action.joints`). Collapsed by default; a bottom sheet on
  * narrow screens. In other modes it keeps showing what the policy would do, greyed out.
  */
 import type { PolicyStep } from "../control/learned";
@@ -84,7 +84,7 @@ export function createObservePanel(
     const row = document.createElement("div");
     row.className = "obs-row";
     const name = document.createElement("span");
-    name.textContent = `joint ${i + 1} command`;
+    name.textContent = jointLabel(i);
     const bar = document.createElement("span");
     bar.className = "bar signed";
     const value = document.createElement("span");

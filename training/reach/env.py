@@ -1,7 +1,8 @@
 """Gymnasium reach environment. Everything parity-critical comes from shared/parity.json and
 mirrors web/src exactly:
 
-- action application: web/src/sim/arm.ts applyDelta(action · deltaScale, deltaScale)
+- action application: web/src/sim/arm.ts applyDelta(action · deltaScale, deltaScale), with the
+  action expanded to all joints (zero for joints outside parity.json `action.joints`)
 - observation: web/src/sim/observation.ts buildObs (field order from parity.json)
 - target clamping and front workspace: web/src/sim/target.ts clampTarget / web/src/sim/eval.ts
 """
@@ -90,6 +91,9 @@ class ReachEnv(gym.Env):
         self.penalty_scale = 1.0
 
         self.n = len(p["joints"])
+        # Indices (in `joints` order) of the joints the policy observes and commands.
+        self.act = np.array([p["joints"].index(j) for j in p["action"]["joints"]])
+        self.na = len(self.act)
         self.qadr = np.array([self.model.joint(j).qposadr[0] for j in p["joints"]])
         self.dadr = np.array([self.model.joint(j).dofadr[0] for j in p["joints"]])
         self.lim = np.array([self.model.joint(j).range for j in p["joints"]])
@@ -104,7 +108,7 @@ class ReachEnv(gym.Env):
 
         size = p["observation"]["size"]
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (size,), np.float64)
-        self.action_space = gym.spaces.Box(-1.0, 1.0, (self.n,), np.float32)
+        self.action_space = gym.spaces.Box(-1.0, 1.0, (self.na,), np.float32)
 
     # --- state helpers -------------------------------------------------------------------------
 
@@ -122,9 +126,20 @@ class ReachEnv(gym.Env):
         mujoco.mj_kinematics(self.model, self.scratch)
         return self.scratch.site_xpos[self.tip_id].copy()
 
+    def expand(self, action: np.ndarray) -> np.ndarray:
+        """Policy action → per-joint action; joints outside action.joints get 0 (held)."""
+        full = np.zeros(self.n)
+        full[self.act] = action
+        return full
+
     def obs(self) -> np.ndarray:
         return build_obs(
-            self.parity, self.q(), self.qd(), self.target, self.tip(), self.prev_action
+            self.parity,
+            self.q()[self.act],
+            self.qd()[self.act],
+            self.target,
+            self.tip(),
+            self.prev_action,
         )
 
     # --- target sampling -----------------------------------------------------------------------
@@ -173,7 +188,7 @@ class ReachEnv(gym.Env):
         mujoco.mj_forward(self.model, self.data)
 
         self.t = 0
-        self.prev_action = np.zeros(self.n)
+        self.prev_action = np.zeros(self.na)
         self.target = self.sample_target()
         self.glide: tuple[np.ndarray, np.ndarray, int, int] | None = None
         n_changes = rng.integers(
@@ -207,7 +222,9 @@ class ReachEnv(gym.Env):
 
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
-        self.data.ctrl[:] = apply_action(self.data.ctrl.copy(), action, self.delta_scale, self.lim)
+        self.data.ctrl[:] = apply_action(
+            self.data.ctrl.copy(), self.expand(action), self.delta_scale, self.lim
+        )
         for _ in range(self.substeps):
             mujoco.mj_step(self.model, self.data)
         self.t += 1
@@ -222,14 +239,15 @@ class ReachEnv(gym.Env):
         settled = dist <= self.success["tolerance"] and speed < self.success["maxTipSpeed"]
         w = self.reward_w
         rate = float(np.sum((action - self.prev_action) ** 2))
+        posture = float(np.sum((self.q() - self.neutral)[self.act] ** 2))
         reward = (
             -w.distance * dist
             + w.precision * (1.0 - np.tanh(dist / w.precision_scale))
             + w.success_bonus * float(settled)
             - self.penalty_scale * w.action_rate * rate
             - self.penalty_scale * w.jerk * float(np.sum(jerk**2))
-            - self.penalty_scale * w.joint_speed * float(np.sum(self.data.qvel[self.dadr] ** 2))
-            - self.penalty_scale * w.posture * float(np.sum((self.q() - self.neutral) ** 2))
+            - self.penalty_scale * w.joint_speed * float(np.sum(self.qd()[self.act] ** 2))
+            - self.penalty_scale * w.posture * posture
             - self.penalty_scale * w.effort * float(np.sum(action**2))
         )
         self.prev_action = action

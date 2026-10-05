@@ -18,12 +18,13 @@ especially [`validation.md`](../specs/001-arm-reach/validation.md).
       Learned ↔ Baseline mid-drag, policy view as a bottom sheet, info panel.
 - [ ] Polish tasks T079 (edge-case e2e), T081 (5-visitor test for SC-006/SC-007), T082
       (minimality pass), T083 (quickstart from a clean clone).
-- [ ] Credibility fixes for the learned policy:
-  - Remove Wrist_Roll from the policy's action space (hold it at neutral). It is invisible to
-    the reward and metrics, so the policy spins it. This changes the parity contract (action
-    size 5 → 4): retrain, re-export, regenerate fixtures.
-  - Train 3 seeds of the final recipe and report mean ± spread (currently a single seed; success
-    is at the 95% threshold: 96% on 100 targets, 94.7% on 300).
+- [x] Credibility fixes for the learned policy (2026-10-04, `validation.md` "Follow-up"):
+      Wrist_Roll removed from the policy (parity.json v2, action size 4); 3 training seeds of the
+      recipe: 92.0% / 94.0% / 0% on 300 targets. The shipped seed: 94.0%, jerk ratio 0.715.
+- [ ] Make the training recipe robust: 1 of 3 seeds never learns to settle, and the shipped policy
+      misses SC-004 (95%) and SC-009 (0.70) on 300 targets by a small margin. Ideas: a
+      success-rate curriculum (start with nearby targets), more seeds with early discard of
+      non-converging runs (reported, not hidden), longer stage a.
 - [ ] Chore: bump GitHub Actions versions (Node 20 deprecation warnings).
 
 ## Next feature: 002-grasp (toward manipulation)

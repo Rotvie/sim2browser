@@ -13,7 +13,7 @@ from typing import Any
 SHARED = Path(__file__).resolve().parents[2] / "shared"
 PARITY_PATH = SHARED / "parity.json"
 MODEL_PATH = "robot/so100_reach.xml"
-PARITY_VERSION = 1
+PARITY_VERSION = 2
 
 
 class ParityError(ValueError):
@@ -51,8 +51,11 @@ def validate(p: dict[str, Any]) -> None:
     obs = p["observation"]
     if obs["size"] != sum(f["size"] for f in obs["fields"]):
         raise ParityError("observation.size must equal the sum of field sizes")
-    if p["action"]["size"] != len(p["joints"]):
-        raise ParityError("action.size must equal the number of joints")
+    act = p["action"]
+    if not set(act["joints"]) <= set(p["joints"]):
+        raise ParityError("action.joints must be a subset of joints")
+    if act["size"] != len(act["joints"]):
+        raise ParityError("action.size must equal the number of action.joints")
     norm = obs.get("normalization")
     if norm is not None and not (len(norm["mean"]) == len(norm["std"]) == obs["size"]):
         raise ParityError("normalization mean/std must have observation.size entries")

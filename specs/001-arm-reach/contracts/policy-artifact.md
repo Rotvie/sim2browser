@@ -7,13 +7,13 @@ Written by `training/reach/export.py` from the trained SB3 policy.
 ```json
 {
   "format": 1,
-  "parityVersion": 1,
+  "parityVersion": 2,
   "activation": "tanh",
   "outputActivation": "clip",
   "layers": [
-    { "in": 21,  "out": 128 },
+    { "in": 18,  "out": 128 },
     { "in": 128, "out": 128 },
-    { "in": 128, "out": 5 }
+    { "in": 128, "out": 4 }
   ],
   "dtype": "float32-le",
   "sha256": "<hex of reach.bin>",

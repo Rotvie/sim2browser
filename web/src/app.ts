@@ -127,7 +127,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           },
         );
         const hasPolicy = shown.some((c) => c.id === "learned");
-        if (hasPolicy) observe = createObservePanel(app, toolbar, msg.observation, msg.joints);
+        if (hasPolicy)
+          observe = createObservePanel(app, toolbar, msg.observation, msg.policyJoints);
         createInfoPanel(
           app,
           toolbar,

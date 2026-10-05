@@ -30,6 +30,17 @@ def test_wrong_observation_size_rejected(parity):
         validate(bad)
 
 
+def test_action_joints_must_be_known_and_sized(parity):
+    bad = copy.deepcopy(parity)
+    bad["action"]["joints"] = [*bad["action"]["joints"][:-1], "Gripper"]
+    with pytest.raises(ParityError):
+        validate(bad)
+    bad = copy.deepcopy(parity)
+    bad["action"]["size"] += 1
+    with pytest.raises(ParityError):
+        validate(bad)
+
+
 def test_reach_and_hashes(parity):
     assert parity["reach"]["maxReach"] > 0
     assert sha256_model(parity["model"]["files"]) == parity["model"]["sha256"]

@@ -36,18 +36,20 @@ neutral pose to random reachable targets. Success = tip within 1 cm, nearly stil
 | Controller                         | Success (100 targets) | Success (300 targets) | Median settle time | Tip jerk vs. baseline |
 | ---------------------------------- | --------------------- | --------------------- | ------------------ | --------------------- |
 | Baseline (damped least-squares IK) | 100%                  | 100%                  | 1.14 s             | 1.00                  |
-| **Learned (PPO, 2×128 MLP)**       | **96%**               | **94.7%**             | 1.12 s             | **0.65–0.67**         |
+| **Learned (PPO, 2×128 MLP)**       | **95%**               | **94.0%**             | 1.12 s             | **0.68–0.72**         |
 | Jacobian transpose (lab example)   | 64%                   |                       | 1.56 s             | 1.86                  |
 
-The learned policy moves about **35% more smoothly** (lower mean squared tip jerk) than the
-classical reactive controller, at a similar speed, but is less precise: about 5% of targets stall
+The learned policy moves about **30% more smoothly** (lower mean squared tip jerk) than the
+classical reactive controller, at a similar speed, but is less precise: about 6% of targets stall
 1–2 cm short. Details, including every training run, are in
 [`specs/001-arm-reach/validation.md`](specs/001-arm-reach/validation.md).
 
 **Caveats.** The comparison is between _reactive_ controllers; a classical controller that plans a
-smooth trajectory (e.g. minimum-jerk) would also be smooth. The policy comes from a single
-training seed. It also rotates the wrist-roll joint, which does not move the tip, so neither the
-reward nor the metrics see it. The arm's workspace is the space in front of its base.
+smooth trajectory (e.g. minimum-jerk) would also be smooth. The training recipe is not robust: of
+three training seeds, two reach 92–94% and one never learns to settle (0%); the shipped policy is
+the better of the two, chosen on a separate target set. The policy leaves the wrist-roll joint
+alone, since rolling the wrist does not move the tip. The arm's workspace is the space in front
+of its base.
 
 ## How it works
 
@@ -81,9 +83,9 @@ flowchart LR
   and steps the simulation in a worker at 50 Hz control / 500 Hz physics. The main thread renders
   and handles input. The page is interactive in about 2.9 s at 12 Mbit/s (2.4 MB brotli before
   interactive); the 80 KB policy loads only when Learned is first selected.
-- **The policy** is a 21 → 128 → 128 → 5 MLP run in about 30 lines of plain TypeScript (no
-  inference runtime). It sees joint angles and speeds, the target, the tip-to-target vector and
-  its previous command, and outputs joint-target changes.
+- **The policy** is an 18 → 128 → 128 → 4 MLP run in about 30 lines of plain TypeScript (no
+  inference runtime). It sees the angles and speeds of the four joints that move the tip, the
+  target, the tip-to-target vector and its previous command, and outputs joint-target changes.
 
 ## Plug in your own controller
 

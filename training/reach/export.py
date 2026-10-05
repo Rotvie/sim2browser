@@ -23,6 +23,9 @@ from .spec import (
 )
 
 JOINTS = ["Rotation", "Pitch", "Elbow", "Wrist_Pitch", "Wrist_Roll"]
+# Joints the policy observes and commands. Wrist_Roll does not move the tip, so neither the reward
+# nor the metrics can see it; left to the policy it spins (001 runs r3-r6). The policy holds it.
+POLICY_JOINTS = ["Rotation", "Pitch", "Elbow", "Wrist_Pitch"]
 TIMESTEP = 0.002
 SUBSTEPS = 10
 CONTROL_HZ = 50
@@ -104,6 +107,7 @@ def base_parity(model: mujoco.MjModel) -> dict:
     neutral = lim.mean(axis=1)
 
     files = model_files()
+    na = len(POLICY_JOINTS)
     return {
         "version": PARITY_VERSION,
         "mujocoVersion": mujoco.__version__,
@@ -114,15 +118,21 @@ def base_parity(model: mujoco.MjModel) -> dict:
         "joints": JOINTS,
         "tipSite": "tip",
         "shoulderSite": "shoulder",
-        "action": {"size": len(JOINTS), "low": -1.0, "high": 1.0, "deltaScale": DELTA_SCALE},
+        "action": {
+            "size": na,
+            "joints": POLICY_JOINTS,
+            "low": -1.0,
+            "high": 1.0,
+            "deltaScale": DELTA_SCALE,
+        },
         "observation": {
-            "size": 21,
+            "size": 3 * na + 6,
             "fields": [
-                {"name": "q", "size": 5, "label": "Joint angles", "unit": "rad"},
-                {"name": "qd", "size": 5, "label": "Joint speeds", "unit": "rad/s"},
+                {"name": "q", "size": na, "label": "Joint angles", "unit": "rad"},
+                {"name": "qd", "size": na, "label": "Joint speeds", "unit": "rad/s"},
                 {"name": "target", "size": 3, "label": "Target position", "unit": "m"},
                 {"name": "tipToTarget", "size": 3, "label": "Tip → target", "unit": "m"},
-                {"name": "prevAction", "size": 5, "label": "Previous command", "unit": ""},
+                {"name": "prevAction", "size": na, "label": "Previous command", "unit": ""},
             ],
         },
         "reach": {

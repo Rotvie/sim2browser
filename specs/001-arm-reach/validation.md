@@ -254,3 +254,65 @@ Found on the live site and fixed: GitHub Pages served the `.stl` meshes uncompre
 `application/vnd.ms-pki.stl`), so time to interactive was 3.58 s. They are now served as `.stl.bin`
 (octet-stream, gzipped; Base mesh 177 KB → 73 KB) with identical bytes, so hashes and parity are
 unchanged. The WASM (2.58 MB gzip) was compressed from the start.
+
+## Follow-up (2026-10-04): Wrist_Roll removed from the policy, 3 training seeds
+
+Two credibility items from the roadmap: the policy spun Wrist_Roll (invisible to reward and
+metrics), and the result came from a single training run.
+
+### Contract change (parity.json version 2)
+
+- New `action.joints` = Rotation, Pitch, Elbow, Wrist_Pitch: the joints the policy observes and
+  commands. Action size 5 → 4, observation 21 → 18 (`q`, `qd`, `prevAction` cover only these
+  joints). Wrist_Roll keeps its current target while the policy is in control; the baseline and
+  Manual still use all 5 joints. Checked first: rolling Wrist_Roll moves the tip by at most
+  5.6e-17 m over 200 random poses.
+- Version bumped to 2 in Python and TypeScript; the old policy is rejected by the loader.
+
+### Training (`training/scripts/train_final.sh <seed>`, seeds 0, 1, 2)
+
+The shipped 001 recipe (r3 → r4) plus one more stage: a) 40M from scratch, default reward,
+penalties ramped over 50%; b) +30M resumed, precision 1.0 at 1 cm, full penalties; c) +30M more
+of b. Stage c was added after b because success was still rising at the end of b on every seed
+that learned (Python proxy, 300 held-out targets, seed 999: s0 71 → 90%, s1 61 → 86% over b's six
+checkpoints).
+
+Python proxy (300 targets, seed 999, used only for selection):
+
+| Seed | End of b | End of c | Jerk ratio (end of c) | Wrist_Roll mean speed |
+|---|---|---|---|---|
+| 0 | 90% | 93% | 0.94 | 0.0 rad/s |
+| 1 | 86% | 93% | 0.67 | 0.0 rad/s |
+| 2 | 0% | 0% | 0.32 | 0.0 rad/s |
+
+Seed 2 never learned to settle within 1 cm (mean distance ≈ 17 cm during training; low jerk
+because it barely converges), the same failure mode as r1/r7. **The recipe converges on 2 of 3
+seeds.** The 001 policy (r4) was a single run, so it was partly lucky.
+
+**Selection**: same rule as 001, the best success among candidates that pass SC-009 (jerk ≤ 0.70)
+on the proxy set: **final-s1** (end of c). Seed 0 ties on success but fails smoothness.
+
+### Result of record (web evaluation, TypeScript policy on WASM)
+
+| Targets | Seed 0 | Seed 1 (shipped) | Seed 2 | Baseline |
+|---|---|---|---|---|
+| 300 (seed 0) | 92.0% / 0.997 | **94.0% MISS / 0.715 MISS** | 0% / 0.348 | 100% |
+| 100 (seed 0, SC definition, CI) | 93% / 0.956 | **95% PASS / 0.681 PASS** | 0% / 0.368 | 100% |
+| 100 (seed 1) | 89% / 0.934 | 91% / 0.649 | 0% / 0.317 | 100% |
+| 100 (seed 2) | 89% / 0.900 | 87% / 0.626 | 0% / 0.328 | 100% |
+
+(success / tip-jerk ratio vs. baseline; settle p50 for seed 1: 1.14 s vs. baseline 1.12 s on 300.)
+
+Across training seeds, 300 targets: converged seeds 92.0% and 94.0% (mean 93.0% ± 1.0); one of
+three seeds fails (0%). Mean over all three: 62%.
+
+**Compared with the 001 policy (r4)**: success 94.0% vs. 94.7% (300) and 91.0% vs. 93.3% pooled
+over the three 100-target sets; jerk ratio 0.715 vs. 0.672. Slightly worse on both, within a few
+targets, in exchange for no wrist spin. The info panel shows the 300-target numbers, including
+both misses.
+
+### Checks
+
+Unit 42/42 (new: Learned observes and moves only `action.joints`), training 15/15, parity 6/6
+(the trajectory replay now expands policy actions to all joints), lint and format clean, e2e P1–P3
++ static-only: 43 passed, 2 skipped (WebKit, as before).

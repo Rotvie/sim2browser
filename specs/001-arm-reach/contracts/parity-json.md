@@ -6,7 +6,7 @@ parity tests only read it. Nothing in it is hand-copied into code.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "mujocoVersion": "3.14.0",
   "model": { "path": "robot/so100_reach.xml", "sha256": "<hex>",
              "files": ["robot/so100_reach.xml", "robot/assets/..."] },
@@ -16,17 +16,18 @@ parity tests only read it. Nothing in it is hand-copied into code.
   "joints": ["Rotation", "Pitch", "Elbow", "Wrist_Pitch", "Wrist_Roll"],
   "tipSite": "tip",
   "shoulderSite": "shoulder",
-  "action": { "size": 5, "low": -1.0, "high": 1.0, "deltaScale": 0.05 },
+  "action": { "size": 4, "joints": ["Rotation", "Pitch", "Elbow", "Wrist_Pitch"],
+              "low": -1.0, "high": 1.0, "deltaScale": 0.05 },
   "observation": {
-    "size": 21,
+    "size": 18,
     "fields": [
-      { "name": "q",           "size": 5, "label": "Joint angles",     "unit": "rad" },
-      { "name": "qd",          "size": 5, "label": "Joint speeds",     "unit": "rad/s" },
+      { "name": "q",           "size": 4, "label": "Joint angles",     "unit": "rad" },
+      { "name": "qd",          "size": 4, "label": "Joint speeds",     "unit": "rad/s" },
       { "name": "target",      "size": 3, "label": "Target position",  "unit": "m" },
       { "name": "tipToTarget", "size": 3, "label": "Tip → target",     "unit": "m" },
-      { "name": "prevAction",  "size": 5, "label": "Previous command", "unit": "" }
+      { "name": "prevAction",  "size": 4, "label": "Previous command", "unit": "" }
     ],
-    "normalization": { "mean": [/* 21 */], "std": [/* 21 */], "clip": 10.0, "eps": 1e-8 }
+    "normalization": { "mean": [/* 18 */], "std": [/* 18 */], "clip": 10.0, "eps": 1e-8 }
   },
   "reach": { "maxReach": 0.0, "margin": 0.01, "hysteresis": 0.005, "minZ": 0.01,
              "frontMargin": 0.02, "baseAxisXY": [x, y], "baseExclusionRadius": 0.05,
@@ -61,8 +62,12 @@ is measured from forward-kinematics sampling at export, not guessed.)
 - The field order in `observation.fields` IS the vector layout. Any layout change bumps
   `version` and requires re-training and new fixtures.
 - `std` is used as `max(std, eps)`; normalized obs = `clip((obs − mean)/std, ±clip)`.
+- `action.joints` (a subset of `joints`, in `joints` order) are the joints the policy observes
+  (`q`, `qd`) and commands. The others keep their current target while the policy is in control.
+  Wrist_Roll is excluded: it does not move the tip, so no reward term or metric can see it, and a
+  policy that controls it spins it (version 1, runs r3–r6 in `validation.md`).
 - Action application: `ctrl = clip(ctrl + action·deltaScale, jointLow, jointHigh)` once per control
-  step, followed by `substeps` physics steps.
+  step for each joint in `action.joints`, followed by `substeps` physics steps.
 - Baseline parameters live here too, so the baseline shown in the demo matches the one evaluated
   and documented.
 - Every reader MUST fail loudly when `mujocoVersion`, `model.sha256`, or `policy.sha256` does not

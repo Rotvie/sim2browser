@@ -76,7 +76,8 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     const panel = page.getByRole("region", { name: "What the policy sees" });
     await expect(panel).toBeVisible();
     await expect(panel).toContainText("Joint angles");
-    await expect(panel).toContainText("joint 5 command");
+    await expect(panel).toContainText("Wrist Pitch");
+    await expect(panel).not.toContainText("Wrist Roll"); // not observed or commanded
     const pt = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
     await page.mouse.move(pt[0], pt[1]);
     await page.mouse.down();
