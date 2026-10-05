@@ -63,6 +63,22 @@ def clamp_target(p: np.ndarray, reach: dict[str, Any]) -> np.ndarray:
     return out
 
 
+def actuator_for(model: mujoco.MjModel, joint: str) -> int:
+    """Id of the actuator driving `joint`."""
+    jid = model.joint(joint).id
+    ids = [a for a in range(model.nu) if model.actuator_trnid[a, 0] == jid]
+    if len(ids) != 1:
+        raise RuntimeError(f"expected one actuator on joint {joint}, found {len(ids)}")
+    return ids[0]
+
+
+def reset_scene(env: ReachEnv) -> None:
+    """MuJoCo defaults (cube at its default pose), gripper closed, as web/src/sim/session.ts."""
+    mujoco.mj_resetData(env.model, env.data)
+    env.data.qpos[env.jaw_qadr] = env.jaw_closed
+    env.data.ctrl[env.jaw_aid] = env.jaw_closed
+
+
 class ReachEnv(gym.Env):
     metadata = {"render_modes": []}
 
@@ -97,6 +113,11 @@ class ReachEnv(gym.Env):
         self.qadr = np.array([self.model.joint(j).qposadr[0] for j in p["joints"]])
         self.dadr = np.array([self.model.joint(j).dofadr[0] for j in p["joints"]])
         self.lim = np.array([self.model.joint(j).range for j in p["joints"]])
+        # Actuator ids of the arm joints (ctrl also holds the gripper, research R8).
+        self.aid = np.array([actuator_for(self.model, j) for j in p["joints"]])
+        self.jaw_aid = self.model.actuator(p["gripper"]["actuator"]).id
+        self.jaw_qadr = self.model.joint(p["gripper"]["joint"]).qposadr[0]
+        self.jaw_closed = p["gripper"]["closed"]
         self.tip_id = self.model.site(p["tipSite"]).id
         self.shoulder_id = self.model.site(p["shoulderSite"]).id
         self.hz = p["controlHz"]
@@ -149,7 +170,7 @@ class ReachEnv(gym.Env):
         bx, by = self.reach["baseAxisXY"]
         while True:
             p = self.fk_tip(self.np_random.uniform(self.lim[:, 0], self.lim[:, 1]))
-            if p[2] < self.reach["minZ"] or p[1] > by - self.reach["frontMargin"]:
+            if p[2] < self.reach["evalMinZ"] or p[1] > by - self.reach["frontMargin"]:
                 continue
             if np.hypot(p[0] - bx, p[1] - by) < self.reach["baseExclusionRadius"]:
                 continue
@@ -178,13 +199,13 @@ class ReachEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         rng = self.np_random
-        mujoco.mj_resetData(self.model, self.data)
+        reset_scene(self)
         if rng.random() < self.sampling.p_random_start:
             q = rng.uniform(self.lim[:, 0], self.lim[:, 1])
         else:
             q = np.clip(self.neutral + rng.normal(0, 0.1, self.n), self.lim[:, 0], self.lim[:, 1])
         self.data.qpos[self.qadr] = q
-        self.data.ctrl[:] = q
+        self.data.ctrl[self.aid] = q
         mujoco.mj_forward(self.model, self.data)
 
         self.t = 0
@@ -222,8 +243,8 @@ class ReachEnv(gym.Env):
 
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
-        self.data.ctrl[:] = apply_action(
-            self.data.ctrl.copy(), self.expand(action), self.delta_scale, self.lim
+        self.data.ctrl[self.aid] = apply_action(
+            self.data.ctrl[self.aid], self.expand(action), self.delta_scale, self.lim
         )
         for _ in range(self.substeps):
             mujoco.mj_step(self.model, self.data)

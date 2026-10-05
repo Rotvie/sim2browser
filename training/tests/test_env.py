@@ -28,15 +28,17 @@ def test_observation_layout(env):
 def test_action_application_and_substeps(env):
     env.reset(seed=2)
     ctrl0 = env.data.ctrl.copy()
+    expected_ctrl0 = ctrl0[env.aid]
     a = np.array([1.0, -1.0, 0.5, -0.25], dtype=np.float32)
     ref = mujoco.MjData(env.model)
     mujoco.mj_copyData(ref, env.model, env.data)
     obs, *_ = env.step(a)
     full = np.append(a.astype(np.float64), 0.0)  # Wrist_Roll is held
-    expected_ctrl = np.clip(ctrl0 + full * 0.05, env.lim[:, 0], env.lim[:, 1])
-    np.testing.assert_array_equal(env.data.ctrl, expected_ctrl)
-    assert env.data.ctrl[4] == ctrl0[4]
-    ref.ctrl[:] = expected_ctrl
+    expected_ctrl = np.clip(expected_ctrl0 + full * 0.05, env.lim[:, 0], env.lim[:, 1])
+    np.testing.assert_array_equal(env.data.ctrl[env.aid], expected_ctrl)
+    assert env.data.ctrl[env.aid[4]] == ctrl0[env.aid[4]]
+    assert env.data.ctrl[env.jaw_aid] == ctrl0[env.jaw_aid]
+    ref.ctrl[env.aid] = expected_ctrl
     for _ in range(env.parity["substeps"]):
         mujoco.mj_step(env.model, ref)
     np.testing.assert_array_equal(env.data.qpos, ref.qpos)
@@ -80,3 +82,12 @@ def test_episode_length_and_target_changes(env):
     assert steps == 250
     moved = sum(not np.array_equal(a, b) for a, b in zip(targets, targets[1:], strict=False))
     assert moved >= 1
+
+
+def test_jaw_closed_and_cube_at_default_after_reset(env):
+    env.reset(seed=5)
+    p = env.parity
+    assert env.model.nu == 6
+    assert env.data.ctrl[env.jaw_aid] == p["gripper"]["closed"]
+    cube = env.model.joint(p["cube"]["joint"]).qposadr[0]
+    np.testing.assert_allclose(env.data.qpos[cube : cube + 2], p["cube"]["defaultPose"]["pos"][:2])

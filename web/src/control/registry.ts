@@ -9,9 +9,12 @@
  *   npm run eval:compare -- --controller <id>
  */
 import type { Arm } from "../sim/arm";
+import type { CubePose } from "../sim/cube";
+import type { Gripper } from "../sim/gripper";
 import type { Sim } from "../sim/mujoco";
 import type { Parity, ReadBytes } from "../sim/parity";
 import { createBaselineController } from "./baseline";
+import { createGraspController } from "./grasp";
 import { jacobianTranspose } from "./jacobianTranspose";
 import { createLearnedController } from "./learned";
 import type { Controller } from "./modes";
@@ -28,6 +31,10 @@ export interface ControllerContext {
   target(): ArrayLike<number>;
   /** Read a file from shared/ (e.g. policy weights). */
   read: ReadBytes;
+  /** The gripper command (open / closed); reaching controllers leave it to the visitor. */
+  gripper: Gripper;
+  /** The cube's pose, and whether both jaws hold it. */
+  cube: { pose(): CubePose; held(): boolean };
 }
 
 export interface ControllerDef {
@@ -67,5 +74,15 @@ export const learned: ControllerDef = {
     createLearnedController({ sim, arm, parity, target, policy: await loadPolicy(read, parity) }),
 };
 
+export const grasp: ControllerDef = {
+  id: "grasp",
+  label: "Grasp",
+  description:
+    "Scripted top-down grasp built on the baseline: approach, descend, close, lift. No learning.",
+  public: true,
+  create: ({ sim, arm, parity, gripper, cube }) =>
+    createGraspController({ sim, arm, parity, gripper, cube }),
+};
+
 /** Order = order in the mode switch (after Manual). */
-export const CONTROLLERS: ControllerDef[] = [baseline, learned, jacobianTranspose];
+export const CONTROLLERS: ControllerDef[] = [baseline, learned, grasp, jacobianTranspose];

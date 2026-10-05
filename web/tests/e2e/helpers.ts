@@ -10,6 +10,10 @@ export interface Hook {
     reachable: boolean;
     mode: string;
     policyStep?: { obsRaw: Float64Array; action: Float64Array };
+    gripper: "open" | "closed";
+    jaw: number;
+    cube: { pos: Float64Array; quat: Float64Array; held: boolean; graspable: boolean };
+    grasp?: { phase: string; failure: string | null };
   } | null;
   fps: number;
   maxFrameGapMs: number;
@@ -18,6 +22,7 @@ export interface Hook {
   linkScreenPoint(name: string): [number, number] | null;
   limits(): number[];
   targetScreenPoint(): [number, number] | null;
+  cubeScreenPoint(): [number, number] | null;
   worldToScreen(p: [number, number, number]): [number, number];
 }
 
@@ -99,4 +104,30 @@ export async function dragTarget(page: Page, dx: number, dy: number, steps = 20)
 
 export function tipToTarget(s: { tip: ArrayLike<number>; target: ArrayLike<number> }): number {
   return Math.hypot(s.tip[0] - s.target[0], s.tip[1] - s.target[1], s.tip[2] - s.target[2]);
+}
+
+/** Drag the cube so its centre lands near floor point (x, y), one mouse step per frame. */
+export async function dragCube(page: Page, x: number, y: number, steps = 20) {
+  const from = await page.evaluate(() => window.__sim2browser.cubeScreenPoint());
+  if (!from) throw new Error("no cube on screen");
+  const start = await page.evaluate(() => [...window.__sim2browser.snapshot!.cube.pos]);
+  // The drag keeps the grab offset on the floor plane: move by the floor-plane difference.
+  const [a, b] = await page.evaluate(
+    ([s, g]) => [window.__sim2browser.worldToScreen(s), window.__sim2browser.worldToScreen(g)],
+    [
+      [start[0], start[1], 0],
+      [x, y, 0],
+    ] as [number, number, number][],
+  );
+  await page.mouse.move(from[0], from[1]);
+  await page.mouse.down();
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(
+      from[0] + ((b[0] - a[0]) * i) / steps,
+      from[1] + ((b[1] - a[1]) * i) / steps,
+    );
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(200);
 }

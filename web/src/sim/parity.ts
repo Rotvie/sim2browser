@@ -32,7 +32,10 @@ export interface Parity {
     maxReach: number;
     margin: number;
     hysteresis: number;
+    /** Lowest target the visitor can set (clamp). */
     minZ: number;
+    /** Lowest target the evaluation (and training) samples; above minZ (002 research R7). */
+    evalMinZ: number;
     /** Demo workspace is in front of the base: tip y <= baseAxisXY[1] - frontMargin. */
     frontMargin: number;
     baseAxisXY: [number, number];
@@ -55,10 +58,60 @@ export interface Parity {
     reachStandoff: number;
     neutralPose: number[];
   };
+  /** The jaw: binary open/closed command, moved at maxSpeed (rad/s). */
+  gripper: {
+    joint: string;
+    actuator: string;
+    open: number;
+    closed: number;
+    maxSpeed: number;
+    default: GripperCommand;
+  };
+  cube: {
+    body: string;
+    joint: string;
+    /** Edge length (m). */
+    size: number;
+    defaultPose: { pos: [number, number, number]; yaw: number };
+  };
+  /** Scripted grasp parameters (research R5); offsets and region computed by export.py. */
+  grasp: {
+    approachHeight: number;
+    descendSpeed: number;
+    approachSpeed: number;
+    liftHeight: number;
+    liftSpeed: number;
+    closeSettle: number;
+    closeTimeout: number;
+    fixedJawOffset: number;
+    verticalOffset: number;
+    rollOffset: number;
+    knockedDistance: number;
+    region: GraspRegion;
+    success: { liftCheck: number; hold: number; timeLimit: number };
+  };
   policy?: { path: string; header: string; sha256: string };
 }
 
-export const PARITY_VERSION = 2;
+export type GripperCommand = "open" | "closed";
+
+/** Floor annulus sector around the base axis, opening toward -y (in front of the arm). */
+export interface GraspRegion {
+  center: [number, number];
+  rMin: number;
+  rMax: number;
+  maxAngle: number;
+}
+
+/** Same test as training/reach/spec.py in_region. */
+export function inRegion(xy: ArrayLike<number>, reg: GraspRegion): boolean {
+  const dx = xy[0] - reg.center[0];
+  const dy = xy[1] - reg.center[1];
+  const r = Math.hypot(dx, dy);
+  return reg.rMin <= r && r <= reg.rMax && Math.abs(Math.atan2(dx, -dy)) <= reg.maxAngle;
+}
+
+export const PARITY_VERSION = 3;
 
 export type ParityErrorCode = "version-mismatch" | "hash-mismatch" | "invalid";
 
@@ -107,6 +160,19 @@ export function validateParity(p: Parity, mujocoVersion: string): void {
   }
   if (p.action.size !== p.action.joints.length) {
     throw new ParityError("invalid", "action.size must equal the number of action.joints");
+  }
+  if (!(p.gripper.closed < p.gripper.open)) {
+    throw new ParityError("invalid", "gripper.closed must be below gripper.open");
+  }
+  const reg = p.grasp.region;
+  if (!(0 <= reg.rMin && reg.rMin < reg.rMax && reg.rMax <= p.reach.maxReach)) {
+    throw new ParityError("invalid", "grasp.region needs 0 <= rMin < rMax <= reach.maxReach");
+  }
+  if (!(0 < reg.maxAngle && reg.maxAngle <= Math.PI / 2)) {
+    throw new ParityError("invalid", "grasp.region.maxAngle must be in (0, pi/2]");
+  }
+  if (!inRegion(p.cube.defaultPose.pos, reg)) {
+    throw new ParityError("invalid", "cube.defaultPose must be inside grasp.region");
   }
 }
 

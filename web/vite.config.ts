@@ -7,7 +7,7 @@ import { servedPath } from "./src/sim/served";
 const BASE = "/sim2browser/";
 const SHARED = resolve(import.meta.dirname, "../shared");
 /** Runtime assets served to the page. Parity fixtures and tooling files stay out of the build. */
-const SHIPPED = ["parity.json", "workspace.bin", "robot", "policy"];
+const SHIPPED = ["parity.json", "workspace.bin", "robot", "policy", "grasp-eval.json"];
 
 const MIME: Record<string, string> = {
   ".js": "text/javascript",

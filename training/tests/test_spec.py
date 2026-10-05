@@ -52,13 +52,15 @@ def test_joint_names_exist_in_model(parity):
     model = mujoco.MjModel.from_xml_path(str(SHARED / parity["model"]["path"]))
     for name in parity["joints"]:
         assert model.joint(name).id >= 0
-    assert model.nu == len(parity["joints"])
+    assert model.nu == len(parity["joints"]) + 1
+    assert model.actuator(parity["gripper"]["actuator"]).id >= 0
 
 
 def test_workspace_contains_neutral_tip(parity):
     model = mujoco.MjModel.from_xml_path(str(SHARED / parity["model"]["path"]))
     data = mujoco.MjData(model)
-    data.qpos[:] = parity["baseline"]["neutralPose"]
+    qadr = [model.joint(j).qposadr[0] for j in parity["joints"]]
+    data.qpos[qadr] = parity["baseline"]["neutralPose"]
     mujoco.mj_kinematics(model, data)
     tip = data.site_xpos[model.site("tip").id]
     ws = parity["reach"]["workspace"]
@@ -80,3 +82,33 @@ def test_workspace_is_front_only(parity):
     front_y = parity["reach"]["baseAxisXY"][1] - parity["reach"]["frontMargin"]
     assert occ.any()
     assert y_lo.max() <= front_y + ws["voxel"]
+
+
+def test_v3_gripper_rules(parity):
+    bad = copy.deepcopy(parity)
+    g = bad["gripper"]
+    g["open"], g["closed"] = g["closed"], g["open"]
+    with pytest.raises(ParityError):
+        validate(bad)
+
+
+def test_v3_region_rules(parity):
+    bad = copy.deepcopy(parity)
+    bad["grasp"]["region"]["rMax"] = bad["grasp"]["region"]["rMin"]
+    with pytest.raises(ParityError):
+        validate(bad)
+    bad = copy.deepcopy(parity)
+    bad["grasp"]["region"]["maxAngle"] = 2.0
+    with pytest.raises(ParityError):
+        validate(bad)
+    bad = copy.deepcopy(parity)
+    bad["grasp"]["region"]["rMax"] = parity["reach"]["maxReach"] + 0.01
+    with pytest.raises(ParityError):
+        validate(bad)
+
+
+def test_v3_default_cube_inside_region(parity):
+    bad = copy.deepcopy(parity)
+    bad["cube"]["defaultPose"]["pos"][1] = parity["reach"]["baseAxisXY"][1] - 0.01
+    with pytest.raises(ParityError):
+        validate(bad)

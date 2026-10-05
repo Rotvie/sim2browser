@@ -8,8 +8,10 @@ import { CONTROLLERS, type ControllerContext, type ControllerDef } from "../cont
 import type { Snapshot } from "../protocol";
 import { createArm, type Arm } from "./arm";
 import { createClock, type Clock } from "./clock";
+import { clampCubePlacement, cubeYaw, isGraspable, yawQuat } from "./cube";
+import { createGripper, type Gripper } from "./gripper";
 import type { Sim } from "./mujoco";
-import type { Parity, ReadBytes } from "./parity";
+import type { GripperCommand, Parity, ReadBytes } from "./parity";
 import { createWorkspace, Target } from "./target";
 
 export interface ModeChange {
@@ -33,6 +35,7 @@ export interface Session {
   readonly parity: Parity;
   readonly modes: ModeMachine;
   readonly target: Target;
+  readonly gripper: Gripper;
   /** Controllers this build offers (registry entries available for this parity.json). */
   readonly controllers: ControllerDef[];
   /** Create and register a controller if needed (may load assets). Throws on failure. */
@@ -41,7 +44,19 @@ export interface Session {
   controllerFailed(id: ControlMode): ModeChange | null;
   dragJoint(i: number, angle: number): ModeChange | null;
   setMode(mode: ControlMode): ModeChange | null;
-  setTarget(pos: ArrayLike<number>): void;
+  /** Visitor's target drag; in grasp mode it hands over to the baseline first. */
+  setTarget(pos: ArrayLike<number>): ModeChange | null;
+  /** Visitor's gripper command; works in every mode (in grasp mode: baseline takes over first). */
+  setGripper(command: GripperCommand): ModeChange | null;
+  /** In grasp mode: start a new attempt from the current state. */
+  regrasp(): void;
+  /** Both jaws touch the cube. */
+  cubeHeld(): boolean;
+  /**
+   * Visitor's cube drop at floor position (x, y), clamped (cube.ts). Refused (false) while the
+   * cube is held or where it would overlap the arm.
+   */
+  setCube(xy: ArrayLike<number>): boolean;
   reset(): void;
   setHidden(hidden: boolean, nowMs: number): void;
   /** Advance in real time; returns the number of control steps taken. */
@@ -68,7 +83,9 @@ export function createSession(
     createWorkspace(workspace, parity.reach.workspace),
     sim.fkSite(parity.tipSite, neutral),
   );
+  const gripper = createGripper(sim, parity);
   const modes = new ModeMachine(manual);
+  const GRASP = "grasp";
   const clock: Clock = createClock({ controlHz: parity.controlHz });
 
   const controllers = (opts.controllers ?? CONTROLLERS).filter(
@@ -80,6 +97,8 @@ export function createSession(
     parity,
     target: () => target.pos,
     read: opts.read ?? (() => Promise.reject(new Error("this session has no file reader"))),
+    gripper,
+    cube: { pose: () => sim.cubePose(), held: () => cubeHeld() },
   };
   for (const def of controllers.filter((d) => d.preload)) {
     const c = def.create(ctx);
@@ -89,10 +108,24 @@ export function createSession(
   modes.setMode(DEFAULT_MODE);
   const pending = new Map<ControlMode, Promise<void>>();
 
+  /** Leaving the grasp: keep the arm where it is (the next controller aims at the tip). */
+  const leaveGrasp = (mode: ControlMode, reason: ModeChange["reason"]): ModeChange | null => {
+    if (!modes.setMode(mode)) return null;
+    return { mode, reason };
+  };
+
   const controlStep = () => {
     modes.controller.step();
+    gripper.step();
     sim.stepPhysics(parity.substeps);
   };
+  const cubeHeld = () =>
+    sim.bodiesInContact(parity.cube.body, "Fixed_Jaw") &&
+    sim.bodiesInContact(parity.cube.body, "Moving_Jaw");
+  // Every moving arm body (the base is static and fenced off by clampCubePlacement).
+  const armBodies = sim.bodyNames.filter(
+    (_, b) => sim.bodyJoint[b] >= 0 || sim.bodyNames[b] === "Moving_Jaw",
+  );
 
   return {
     sim,
@@ -100,7 +133,9 @@ export function createSession(
     parity,
     modes,
     target,
+    gripper,
     controllers,
+    cubeHeld,
     ensureController(id) {
       if (modes.available(id)) return Promise.resolve();
       const def = controllers.find((d) => d.id === id);
@@ -124,13 +159,40 @@ export function createSession(
       return change;
     },
     setMode(mode) {
+      if (modes.mode === GRASP && mode !== GRASP) target.set(sim.sitePos(parity.tipSite));
       return modes.setMode(mode) ? { mode, reason: "user" } : null;
     },
     setTarget(pos) {
+      const change = modes.mode === GRASP ? leaveGrasp(DEFAULT_MODE, "target-drag") : null;
       target.set(pos);
+      return change;
+    },
+    setGripper(command) {
+      let change: ModeChange | null = null;
+      if (modes.mode === GRASP) {
+        target.set(sim.sitePos(parity.tipSite));
+        change = leaveGrasp(DEFAULT_MODE, "user");
+      }
+      gripper.set(command);
+      return change;
+    },
+    regrasp() {
+      if (modes.mode === GRASP) modes.controller.enter();
+    },
+    setCube(xy) {
+      if (cubeHeld()) return false;
+      const before = sim.cubePose();
+      const [x, y] = clampCubePlacement(xy, parity);
+      sim.setCubePose([x, y, parity.cube.size / 2], yawQuat(cubeYaw(before.quat)));
+      if (armBodies.some((b) => sim.bodiesInContact(parity.cube.body, b))) {
+        sim.setCubePose(before.pos, before.quat);
+        return false;
+      }
+      return true;
     },
     reset() {
       sim.resetToPose(neutral);
+      gripper.reset();
       target.reset();
       manual.resetGoal(neutral);
       modes.controller.enter();
@@ -147,6 +209,7 @@ export function createSession(
     controlStep,
     snapshot() {
       const { pos, quat } = sim.bodyPoses();
+      const cube = sim.cubePose();
       const frames = sim.jointFrames();
       // Policy view: the active controller if it can be inspected, else the first one that can.
       let policyStep;
@@ -175,7 +238,11 @@ export function createSession(
         jointAxis: frames.axis,
         target: Float64Array.from(target.pos),
         reachable: target.reachable,
+        jaw: sim.jaw(),
+        gripper: gripper.command,
+        cube: { ...cube, held: cubeHeld(), graspable: isGraspable(cube, parity) },
         mode: modes.mode,
+        grasp: modes.mode === GRASP ? modes.controller.graspState?.() : undefined,
         policyStep,
         policyStepActive,
       };

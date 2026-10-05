@@ -12,18 +12,17 @@ describe("policy-recorded.json", () => {
     const { sim, parity } = await loadNodeSim();
     const policy = await loadPolicy(readShared, parity);
     const norm = parity.observation.normalization!;
-    sim.resetToPose(fx.init.qpos);
-    sim.setCtrl(fx.init.ctrl);
+    sim.setState(fx.init.qpos, fx.init.qvel, fx.init.ctrl);
     const arm = createArm(sim);
     const ds = parity.action.deltaScale;
-    let target = fx.init.target;
+    let target = fx.init.target!; // policy fixtures always record a target
     const idx = parity.action.joints.map((j) => parity.joints.indexOf(j));
     const pick = (v: ArrayLike<number>) => idx.map((i) => v[i]);
     let prev = new Array(idx.length).fill(0);
     let worstObs = 0;
     let worstAct = 0;
     fx.steps.forEach((step, k) => {
-      const change = fx.targetChanges.find((c) => c.step === k);
+      const change = fx.targetChanges!.find((c) => c.step === k);
       if (change) target = change.target;
       const obsRaw = buildObs(
         {

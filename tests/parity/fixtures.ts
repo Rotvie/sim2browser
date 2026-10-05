@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { SHARED_DIR } from "../../web/tests/node-shared";
 
 export interface FixtureStep {
+  /** trajectory/policy kinds: per-joint deltas (scaled by deltaScale). */
   action: number[];
+  /** ctrl kind: absolute targets for every actuator, model order. */
+  ctrl?: number[];
   qpos: number[];
   qvel: number[];
   obsRaw?: number[];
@@ -16,9 +19,9 @@ export interface Fixture {
   parityJsonSha256: string;
   modelSha256: string;
   mujocoVersion: string;
-  kind: "trajectory" | "policy";
-  init: { qpos: number[]; qvel: number[]; ctrl: number[]; target: number[] };
-  targetChanges: { step: number; target: number[] }[];
+  kind: "trajectory" | "policy" | "ctrl";
+  init: { qpos: number[]; qvel: number[]; ctrl: number[]; target?: number[] };
+  targetChanges?: { step: number; target: number[] }[];
   steps: FixtureStep[];
 }
 
@@ -26,6 +29,8 @@ export const FIXTURES = [
   "trajectory-random.json",
   "trajectory-limits.json",
   "policy-recorded.json",
+  "contact-random.json",
+  "grasp-recorded.json",
 ];
 
 export function loadFixture(name: string): Fixture {

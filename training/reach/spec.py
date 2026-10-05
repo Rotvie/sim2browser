@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
 SHARED = Path(__file__).resolve().parents[2] / "shared"
 PARITY_PATH = SHARED / "parity.json"
-MODEL_PATH = "robot/so100_reach.xml"
-PARITY_VERSION = 2
+MODEL_PATH = "robot/so100.xml"
+PARITY_VERSION = 3
 
 
 class ParityError(ValueError):
@@ -59,6 +60,23 @@ def validate(p: dict[str, Any]) -> None:
     norm = obs.get("normalization")
     if norm is not None and not (len(norm["mean"]) == len(norm["std"]) == obs["size"]):
         raise ParityError("normalization mean/std must have observation.size entries")
+    g = p["gripper"]
+    if not g["closed"] < g["open"]:
+        raise ParityError("gripper.closed must be below gripper.open")
+    reg = p["grasp"]["region"]
+    if not 0 <= reg["rMin"] < reg["rMax"] <= p["reach"]["maxReach"]:
+        raise ParityError("grasp.region needs 0 <= rMin < rMax <= reach.maxReach")
+    if not 0 < reg["maxAngle"] <= math.pi / 2:
+        raise ParityError("grasp.region.maxAngle must be in (0, pi/2]")
+    if not in_region(p["cube"]["defaultPose"]["pos"], reg):
+        raise ParityError("cube.defaultPose must be inside grasp.region")
+
+
+def in_region(pos: list[float], reg: dict[str, Any]) -> bool:
+    """Same test as web/src/sim/cube.ts inRegion: annulus sector opening toward -y."""
+    dx, dy = pos[0] - reg["center"][0], pos[1] - reg["center"][1]
+    r = math.hypot(dx, dy)
+    return reg["rMin"] <= r <= reg["rMax"] and abs(math.atan2(dx, -dy)) <= reg["maxAngle"]
 
 
 def load_parity(path: Path = PARITY_PATH) -> dict[str, Any]:

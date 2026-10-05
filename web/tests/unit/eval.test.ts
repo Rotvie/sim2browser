@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { detectSuccess, meanSqJerk, reachableTargets } from "../../src/sim/eval";
+import {
+  detectSuccess,
+  graspPlacements,
+  GraspJudge,
+  meanSqJerk,
+  reachableTargets,
+} from "../../src/sim/eval";
+import { inRegion } from "../../src/sim/parity";
 import { loadNodeSim } from "../node-shared";
 
 const success = { tolerance: 0.01, maxTipSpeed: 0.02, hold: 0.2, timeLimit: 2.0 };
@@ -56,5 +63,44 @@ describe("seeded reachable targets", () => {
       a.map((p) => Array.from(p)),
     );
     sim.dispose();
+  });
+});
+
+describe("grasp evaluation (002 research R6)", () => {
+  it("placements are deterministic, inside the region, uniform by area, yaw in [0, pi/2)", async () => {
+    const { parity, sim } = await loadNodeSim();
+    sim.dispose();
+    const reg = parity.grasp.region;
+    expect(graspPlacements(parity, 50, 0)).toEqual(graspPlacements(parity, 50, 0));
+    const ps = graspPlacements(parity, 10_000, 1);
+    let rSum = 0;
+    for (const p of ps) {
+      expect(inRegion(p.pos, reg)).toBe(true);
+      expect(p.yaw).toBeGreaterThanOrEqual(0);
+      expect(p.yaw).toBeLessThan(Math.PI / 2);
+      rSum += Math.hypot(p.pos[0] - reg.center[0], p.pos[1] - reg.center[1]);
+    }
+    // Uniform by area over an annulus: mean radius = (2/3)(R³ − r³)/(R² − r²).
+    const mean = ((2 / 3) * (reg.rMax ** 3 - reg.rMin ** 3)) / (reg.rMax ** 2 - reg.rMin ** 2);
+    expect(Math.abs(rSum / ps.length - mean) / mean).toBeLessThan(0.03);
+  });
+
+  it("GraspJudge: 1 s lifted and held succeeds, 0.9 s does not, late does not", async () => {
+    const { parity, sim } = await loadNodeSim();
+    sim.dispose();
+    const succ = parity.grasp.success;
+    const rest = 0.015;
+    const feed = (from: number, to: number) => {
+      const j = new GraspJudge(succ, rest);
+      let ok = false;
+      for (let t = 0; t <= succ.timeLimit + 2; t += 0.02) {
+        const up = t >= from && t < to;
+        ok = j.update(t, up ? rest + succ.liftCheck + 0.01 : rest, up) || ok;
+      }
+      return { ok, liftTime: j.liftTime };
+    };
+    expect(feed(3, 4.5)).toEqual({ ok: true, liftTime: expect.closeTo(3, 6) });
+    expect(feed(3, 3.9).ok).toBe(false);
+    expect(feed(succ.timeLimit - 0.5, succ.timeLimit + 2).ok).toBe(false);
   });
 });

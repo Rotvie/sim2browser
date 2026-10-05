@@ -7,9 +7,18 @@
  */
 import type { PolicyStep } from "./learned";
 
+export type GraspPhase = "approach" | "descend" | "close" | "lift" | "hold" | "done" | "failed";
+export type GraspFailure = "not-graspable" | "missed" | "slipped" | "knocked" | "timeout";
+export interface GraspState {
+  phase: GraspPhase;
+  failure: GraspFailure | null;
+  /** Seconds from the attempt's start to the start of the successful hold. */
+  liftTime: number | null;
+}
+
 export type ControlMode = string;
 
-export type ModeChangeReason = "user" | "joint-grab" | "controller-failed";
+export type ModeChangeReason = "user" | "joint-grab" | "controller-failed" | "target-drag";
 
 export interface Controller {
   /** Called when the controller becomes active. */
@@ -21,6 +30,8 @@ export interface Controller {
    * says whether it is the controller in charge right now.
    */
   inspect?(active: boolean): PolicyStep | null;
+  /** Optional: the scripted grasp's progress (shown while it is in charge). */
+  graspState?(): GraspState;
 }
 
 export const MANUAL = "manual";

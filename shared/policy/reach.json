@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "parityVersion": 2,
+  "parityVersion": 3,
   "activation": "tanh",
   "outputActivation": "clip",
   "layers": [
@@ -37,8 +37,8 @@
     }
   },
   "metrics": {
-    "successRate": 0.94,
-    "jerkRatioVsBaseline": 0.7152,
+    "successRate": 0.9466666666666667,
+    "jerkRatioVsBaseline": 0.9309,
     "baselineSuccessRate": 1,
     "n": 300,
     "seed": 0

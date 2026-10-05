@@ -1,8 +1,9 @@
 """Decimate the visual meshes for download size (research R10 mitigation, tasks T040).
 
 Reads the original Menagerie STL files (never already-decimated ones, so runs are reproducible)
-and writes decimated binary STL into shared/robot/assets/. Physics is unaffected: every moving
-body has an explicit <inertial> and all geoms are visual-only (density 0, no contacts).
+and writes decimated binary STL into shared/robot/assets/. Mass and inertia are unaffected:
+every moving body has an explicit <inertial>. Link collision uses hulls of these decimated meshes
+(scripts/make_hulls.py), so rerun that script after decimating.
 
     uv run --group tools python scripts/decimate_meshes.py --src <menagerie>/trs_so_arm100/assets
 """
@@ -27,6 +28,9 @@ def main() -> None:
 
     total_in = total_out = 0
     for dest in sorted(DEST.glob("*.stl")):
+        # Collision meshes (Menagerie's jaw meshes, our precomputed hulls) are not decimated.
+        if "_Collision_" in dest.stem or dest.stem.endswith("_Hull"):
+            continue
         mesh = trimesh.load_mesh(args.src / dest.name, process=True)
         verts, faces = fast_simplification.simplify(
             mesh.vertices.astype(np.float32), mesh.faces, target_reduction=1 - args.keep

@@ -65,12 +65,16 @@ async function init(baseUrl: string) {
       bodyJoint: sim.bodyJoint,
       bodyNames: sim.bodyNames,
       bodyParent: sim.bodyParent,
-      geoms: sim.geoms(),
+      // Collision geoms (group 3) are never drawn: do not copy them to the main thread.
+      geoms: sim.geoms().filter((g) => g.group !== 3),
       neutralPose: parity.baseline.neutralPose,
       maxReach: parity.reach.maxReach,
       baseline: parity.baseline,
       policyJoints: parity.action.joints,
       observation: parity.observation.fields,
+      gripper: parity.gripper,
+      cube: { size: parity.cube.size, body: parity.cube.body },
+      graspRegion: parity.grasp.region,
       controllers: session.controllers.map(({ id, label, description, public: pub }) => ({
         id,
         label,
@@ -104,10 +108,20 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       postModeChange(session.dragJoint(msg.joint, msg.angle));
       break;
     case "setTarget":
-      session.setTarget(msg.pos);
+      postModeChange(session.setTarget(msg.pos));
       break;
     case "setMode":
       void selectController(session, msg.mode);
+      break;
+    case "setGripper":
+      postModeChange(session.setGripper(msg.command));
+      break;
+    case "regrasp":
+      session.regrasp();
+      break;
+    case "setCube":
+      session.setCube(msg.pos);
+      postSnapshot(session);
       break;
     case "reset":
       session.reset();

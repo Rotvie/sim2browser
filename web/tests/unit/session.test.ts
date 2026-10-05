@@ -40,21 +40,40 @@ describe("session", () => {
 });
 
 describe("joint limits under abrupt manual commands (FR-005)", () => {
-  it("slamming every joint between its limits never exceeds them by more than 0.01 rad", async () => {
+  // MuJoCo joint limits are soft. Free: overshoot < 0.01 rad. With the arm pressed into the floor
+  // (002: the floor collides), floor and limit push against each other: < 0.02 rad (measured
+  // 0.016, Elbow, arm stretched flat; specs/002-grasp/validation.md).
+  it("slamming every joint between its limits never exceeds them by more than 0.01 rad (0.02 against the floor)", async () => {
     const { sim, parity, workspace } = await loadNodeSim();
     const s = createSession(sim, parity, workspace);
-    let worst = 0;
+    const links = [
+      "Rotation_Pitch",
+      "Upper_Arm",
+      "Lower_Arm",
+      "Wrist_Pitch_Roll",
+      "Fixed_Jaw",
+      "Moving_Jaw",
+    ];
+    let worstFree = 0;
+    let worstFloor = 0;
     for (let k = 0; k < 12; k++) {
       for (let j = 0; j < sim.nu; j++) s.dragJoint(j, (k + j) % 2 ? 99 : -99);
+      let lastFloor = -99;
       for (let i = 0; i < 100; i++) {
         s.controlStep();
         const q = sim.q();
+        let over = 0;
         for (let j = 0; j < sim.nu; j++) {
-          worst = Math.max(worst, q[j] - sim.limits[2 * j + 1], sim.limits[2 * j] - q[j]);
+          over = Math.max(over, q[j] - sim.limits[2 * j + 1], sim.limits[2 * j] - q[j]);
         }
+        // The floor's push lingers for a few steps after the contact ends (rebound): 0.1 s.
+        if (links.some((b) => sim.bodiesInContact(b, "world"))) lastFloor = i;
+        if (i - lastFloor <= 5) worstFloor = Math.max(worstFloor, over);
+        else worstFree = Math.max(worstFree, over);
       }
     }
-    expect(worst).toBeLessThanOrEqual(0.01);
+    expect(worstFree).toBeLessThanOrEqual(0.01);
+    expect(worstFloor).toBeLessThanOrEqual(0.02);
     sim.dispose();
   });
 });

@@ -4,9 +4,12 @@ import { MANUAL } from "./control/modes";
 import type { FromWorker, ReadyInfo, Snapshot, ToWorker } from "./protocol";
 import { createArmView } from "./render/arm";
 import { PoseInterpolator } from "./render/interp";
+import { attachCubeDrag } from "./render/cubeDrag";
 import { attachJointPicker } from "./render/picking";
 import { createScene } from "./render/scene";
 import { createTargetView, type TargetView } from "./render/target";
+import { createGraspStatus } from "./ui/graspStatus";
+import { createGripperButton, type GripperButton } from "./ui/gripperButton";
 import { createHint } from "./ui/hint";
 import { createInfoPanel } from "./ui/infoPanel";
 import type { Messages } from "./ui/messages";
@@ -56,12 +59,16 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   const interp = new PoseInterpolator();
   const stats = new FrameStats();
   const hint = createHint(app, "Drag the target");
+  // Second hint (002): once the visitor has moved the target, point at the cube.
+  const cubeHint = createHint(app, "Open the gripper (G) and pick up the cube", "sim2browser:cube");
   let latest: Snapshot | null = null;
   let ready: ReadyInfo | null = null;
   let arm: ReturnType<typeof createArmView> | null = null;
   let target: TargetView | null = null;
   let modeSwitch: ModeSwitch | null = null;
   let observe: ObservePanel | null = null;
+  let gripperButton: GripperButton | null = null;
+  const graspStatus = createGraspStatus(app, () => send({ type: "regrasp" }));
   /** Modes the worker has run at least once (already created: no loading spinner). */
   const used = new Set<string>();
 
@@ -94,7 +101,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         ready = msg;
         arm = createArmView(msg.geoms, msg.bodyNames.length);
         view.scene.add(arm.root);
-        // Registered before the joint picker: grabbing the target takes priority.
+        const cubeBody = bodyIndex(msg.cube.body);
+        // Registered before the joint picker: grabbing the target takes priority, then the cube.
         target = createTargetView({
           canvas,
           camera: view.camera,
@@ -103,6 +111,19 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           latest: () => latest,
           send: (pos) => send({ type: "setTarget", pos }),
           onInteract: () => hint.dismiss(),
+        });
+        attachCubeDrag({
+          canvas,
+          camera: view.camera,
+          scene: view.scene,
+          meshes: arm.meshes.filter((m) => m.userData.body === cubeBody),
+          region: msg.graspRegion,
+          latest: () => latest,
+          send: (pos) => send({ type: "setCube", pos }),
+          onInteract: () => {
+            hint.dismiss();
+            cubeHint.dismiss();
+          },
         });
         attachJointPicker({
           canvas,
@@ -126,6 +147,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
             send({ type: "setMode", mode });
           },
         );
+        gripperButton = createGripperButton(toolbar, (command) => {
+          cubeHint.dismiss();
+          send({ type: "setGripper", command });
+        });
         const hasPolicy = shown.some((c) => c.id === "learned");
         if (hasPolicy)
           observe = createObservePanel(app, toolbar, msg.observation, msg.policyJoints);
@@ -136,6 +161,9 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           msg.observation.map((f) => f.label),
           hasPolicy ? new URL("shared/policy/reach.json", document.baseURI).href : null,
           shown.filter((c) => !c.public),
+          shown.some((c) => c.id === "grasp")
+            ? new URL("shared/grasp-eval.json", document.baseURI).href
+            : null,
         );
         messages.hide();
         break;
@@ -144,6 +172,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         latest = msg;
         used.add(msg.mode);
         modeSwitch?.show(msg.mode);
+        gripperButton?.show(msg.gripper);
+        graspStatus.show(msg.grasp);
         interp.push({ pos: msg.bodyPos, quat: msg.bodyQuat }, performance.now());
         break;
       case "modeChanged":
@@ -185,6 +215,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
     const sheet = window.innerWidth < 700 ? observe?.openElement() : null;
     view.setBottomInset(sheet ? canvas.clientHeight - sheet.getBoundingClientRect().top : 0);
     hint.place(target?.screenPoint() ?? null);
+    const cubeAt = latest?.cube.pos;
+    cubeHint.place(
+      !hint.active && cubeAt ? toScreen(new THREE.Vector3(cubeAt[0], cubeAt[1], cubeAt[2])) : null,
+    );
     view.render();
     requestAnimationFrame(loop);
   };
@@ -213,6 +247,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
       },
       bodyNames: () => ready?.bodyNames ?? [],
       targetScreenPoint: () => target?.screenPoint() ?? null,
+      cubeScreenPoint: () => {
+        const c = latest?.cube.pos;
+        return c ? toScreen(new THREE.Vector3(c[0], c[1], c[2])) : null;
+      },
       worldToScreen: (p: [number, number, number]) => toScreen(new THREE.Vector3(...p)),
       limits: () => (ready ? Array.from(ready.limits) : []),
     }),

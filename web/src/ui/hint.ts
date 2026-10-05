@@ -4,17 +4,17 @@
  */
 const KEY = "sim2browser:interacted";
 
-function seen(): boolean {
+function seen(key: string): boolean {
   try {
-    return sessionStorage.getItem(KEY) === "1";
+    return sessionStorage.getItem(key) === "1";
   } catch {
     return false;
   }
 }
 
-function remember(): void {
+function remember(key: string): void {
   try {
-    sessionStorage.setItem(KEY, "1");
+    sessionStorage.setItem(key, "1");
   } catch {
     // Storage can be unavailable (private mode, blocked site data); the hint just reappears.
   }
@@ -24,9 +24,12 @@ export interface Hint {
   /** Position in CSS pixels relative to the canvas, or null to hide for this frame. */
   place(pos: [number, number] | null): void;
   dismiss(): void;
+  /** Not dismissed yet (in this page session). */
+  readonly active: boolean;
 }
 
-export function createHint(root: HTMLElement, label: string): Hint {
+/** `key` names the hint in sessionStorage, so each hint is shown once per session. */
+export function createHint(root: HTMLElement, label: string, key = KEY): Hint {
   const el = document.createElement("div");
   el.className = "hint";
   el.setAttribute("aria-hidden", "true");
@@ -38,9 +41,12 @@ export function createHint(root: HTMLElement, label: string): Hint {
   el.append(dot, text);
   el.hidden = true;
   root.appendChild(el);
-  let active = !seen();
+  let active = !seen(key);
 
   return {
+    get active() {
+      return active;
+    },
     place(pos) {
       if (!active || !pos) {
         el.hidden = true;
@@ -53,7 +59,7 @@ export function createHint(root: HTMLElement, label: string): Hint {
     dismiss() {
       if (!active) return;
       active = false;
-      remember();
+      remember(key);
       el.hidden = true;
     },
   };

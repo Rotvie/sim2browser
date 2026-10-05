@@ -1,6 +1,6 @@
 /**
- * Arm meshes built from the compiled MuJoCo model (one geometry source, no second loader),
- * posed from body poses each frame.
+ * Arm meshes and the cube, built from the compiled MuJoCo model (one geometry source, no second
+ * loader), posed from body poses each frame. Collision geoms (group 3) are never drawn.
  */
 import * as THREE from "three";
 import type { GeomInfo } from "../sim/mujoco";
@@ -29,14 +29,19 @@ export function createArmView(geoms: GeomInfo[], nbody: number): ArmView {
 
   const meshes: THREE.Mesh[] = [];
   for (const geom of geoms) {
-    if (!geom.mesh) continue;
-    const indexed = new THREE.BufferGeometry();
-    indexed.setAttribute("position", new THREE.BufferAttribute(geom.mesh.vert, 3));
-    indexed.setIndex(new THREE.BufferAttribute(Uint32Array.from(geom.mesh.face), 1));
-    // CAD meshes have sharp edges: per-face normals avoid smoothing artifacts across them.
-    const geometry = indexed.toNonIndexed();
-    indexed.dispose();
-    geometry.computeVertexNormals();
+    if (geom.group === 3) continue;
+    let geometry: THREE.BufferGeometry;
+    if (geom.type === "box") {
+      geometry = new THREE.BoxGeometry(2 * geom.size[0], 2 * geom.size[1], 2 * geom.size[2]);
+    } else if (geom.mesh) {
+      const indexed = new THREE.BufferGeometry();
+      indexed.setAttribute("position", new THREE.BufferAttribute(geom.mesh.vert, 3));
+      indexed.setIndex(new THREE.BufferAttribute(Uint32Array.from(geom.mesh.face), 1));
+      // CAD meshes have sharp edges: per-face normals avoid smoothing artifacts across them.
+      geometry = indexed.toNonIndexed();
+      indexed.dispose();
+      geometry.computeVertexNormals();
+    } else continue;
     const [r, g, b, a] = geom.rgba;
     const dark = r + g + b < 1;
     const material = new THREE.MeshStandardMaterial({

@@ -5,6 +5,21 @@
 import type { PolicyHeader } from "../control/policy";
 import type { Parity } from "../sim/parity";
 
+/** shared/grasp-eval.json (002 contracts/grasp-eval.md), the fields the panel shows. */
+interface GraspEval {
+  n: number;
+  successRate: number;
+  medianTimeToLift: number | null;
+  failures: Record<string, number>;
+}
+
+const FAILURE_WORDS: Record<string, string> = {
+  missed: "missed the cube",
+  slipped: "cube slipped",
+  knocked: "knocked the cube",
+  timeout: "took too long",
+};
+
 export function createInfoPanel(
   root: HTMLElement,
   toolbar: HTMLElement,
@@ -12,6 +27,7 @@ export function createInfoPanel(
   observed: string[],
   policyHeaderUrl: string | null,
   labControllers: { label: string; description: string }[] = [],
+  graspEvalUrl: string | null = null,
 ): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -46,6 +62,7 @@ export function createInfoPanel(
     <p class="note">The arm works in front of its base. Targets it cannot reach are shown in orange;
       it stretches toward them and stops.</p>
     <div class="learned-info" hidden></div>
+    <div class="grasp-info" hidden></div>
     ${
       labControllers.length
         ? `<h3>Lab controllers</h3>` +
@@ -73,7 +90,7 @@ export function createInfoPanel(
             <dt>Reached target</dt><dd>${pct(m.successRate)} <span class="${m.successRate >= 0.95 ? "ok" : "miss"}">(target ≥ 95%)</span></dd>
             <dt>Tip jerk vs baseline</dt><dd>${(m.jerkRatioVsBaseline * 100).toFixed(0)}% <span class="${m.jerkRatioVsBaseline <= 0.7 ? "ok" : "miss"}">(target ≤ 70%)</span></dd>
           </dl>
-          <p class="note">Measured on ${m.n ?? 100} random reachable targets, 1 cm tolerance,
+          <p class="note">Measured on ${m.n ?? 100} random reachable targets (at least 4 cm above the floor), 1 cm tolerance,
             within 2 s. Numbers are shown as measured, including any shortfall.</p>`
         : `<p class="note">Not measured yet.</p>`;
       learnedInfo.innerHTML = `
@@ -92,13 +109,46 @@ export function createInfoPanel(
     }
   };
 
+  // The grasp section, likewise, from shared/grasp-eval.json: the release evaluation's numbers.
+  const graspInfo = panel.querySelector<HTMLElement>(".grasp-info")!;
+  let graspLoaded = false;
+  const loadGrasp = async () => {
+    if (graspLoaded || !graspEvalUrl) return;
+    graspLoaded = true;
+    try {
+      const r = (await (await fetch(graspEvalUrl)).json()) as GraspEval;
+      const failures = Object.entries(r.failures).filter(([, k]) => k > 0);
+      const t = r.medianTimeToLift;
+      graspInfo.innerHTML = `
+        <h3>Scripted grasp</h3>
+        <p>No learning: a script built on the baseline. It moves above the cube with the jaws
+          pointing down and turned to match the cube, descends, closes the gripper and lifts.
+          Only one jaw moves, so it comes down a little to one side of the cube. It reports a
+          failure instead of pretending.</p>
+        <dl>
+          <dt>Lifted the cube</dt><dd>${(r.successRate * 100).toFixed(1)}% <span class="${r.successRate >= 0.9 ? "ok" : "miss"}">(target ≥ 90%)</span></dd>
+          <dt>Median time to lift</dt><dd>${t === null ? "–" : `${t.toFixed(1)} s`} <span class="${t !== null && t <= 6 ? "ok" : "miss"}">(target ≤ 6 s)</span></dd>
+          <dt>Failures</dt><dd>${failures.length ? failures.map(([k, v]) => `${v} ${FAILURE_WORDS[k] ?? k}`).join(", ") : "none"}</dd>
+        </dl>
+        <p class="note">Measured on ${r.n} random cube placements in the reachable area (random
+          turn), from the starting pose. Success: the cube at least 5 cm up, held for 1 s, within
+          10 s. Numbers are shown as measured.</p>`;
+      graspInfo.hidden = false;
+    } catch {
+      graspLoaded = false;
+    }
+  };
+
   const set = (open: boolean) => {
     panel.hidden = !open;
     button.setAttribute("aria-expanded", String(open));
   };
   button.addEventListener("click", () => {
     set(panel.hidden !== false);
-    if (!panel.hidden) void loadLearned();
+    if (!panel.hidden) {
+      void loadLearned();
+      void loadGrasp();
+    }
   });
   panel.querySelector(".close")!.addEventListener("click", () => set(false));
   document.addEventListener("keydown", (e) => {

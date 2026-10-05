@@ -12,7 +12,8 @@
     "eval": "tsx scripts/eval.ts",
     "eval:compare": "tsx scripts/eval-compare.ts",
     "size": "tsx scripts/size.ts",
-    "lint": "eslint . && prettier --check ."
+    "lint": "eslint . && prettier --check .",
+    "eval:grasp": "tsx scripts/eval-grasp.ts"
   },
   "dependencies": {
     "@mujoco/mujoco": "3.14.0",

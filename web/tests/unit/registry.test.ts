@@ -5,12 +5,16 @@ import { createSession } from "../../src/sim/session";
 import { loadNodeSim, readShared } from "../node-shared";
 
 describe("controller registry", () => {
-  it("has unique ids, labels and descriptions; public ones are the demo's three", () => {
+  it("has unique ids, labels and descriptions; public ones are the demo's (002: + grasp)", () => {
     const ids = CONTROLLERS.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).not.toContain("manual");
     for (const c of CONTROLLERS) expect(c.label && c.description).toBeTruthy();
-    expect(CONTROLLERS.filter((c) => c.public).map((c) => c.id)).toEqual(["baseline", "learned"]);
+    expect(CONTROLLERS.filter((c) => c.public).map((c) => c.id)).toEqual([
+      "baseline",
+      "learned",
+      "grasp",
+    ]);
   });
 
   it("every registered controller can be created and evaluated headlessly", async () => {

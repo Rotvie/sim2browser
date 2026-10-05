@@ -1,9 +1,9 @@
 {
-  "version": 2,
+  "version": 3,
   "mujocoVersion": "3.14.0",
   "model": {
-    "path": "robot/so100_reach.xml",
-    "sha256": "b94fc274b980a1525ee4bc060e6d1e0d61fc33557db461af090662fa9dd4ed96",
+    "path": "robot/so100.xml",
+    "sha256": "0520acdc573906b22d56a2e2628ffe4e61063f094004444ffd7cf0d67dad9122",
     "files": [
       "robot/assets/Base.stl",
       "robot/assets/Base_Motor.stl",
@@ -18,7 +18,7 @@
       "robot/assets/Upper_Arm_Motor.stl",
       "robot/assets/Wrist_Pitch_Roll.stl",
       "robot/assets/Wrist_Pitch_Roll_Motor.stl",
-      "robot/so100_reach.xml"
+      "robot/so100.xml"
     ]
   },
   "timestep": 0.002,
@@ -129,6 +129,7 @@
     "margin": 0.01,
     "hysteresis": 0.005,
     "minZ": 0.01,
+    "evalMinZ": 0.04,
     "frontMargin": 0.02,
     "baseAxisXY": [
       0.0,
@@ -171,6 +172,54 @@
       0.0,
       0.0
     ]
+  },
+  "gripper": {
+    "joint": "Jaw",
+    "actuator": "Jaw",
+    "open": 1.0,
+    "closed": -0.174,
+    "maxSpeed": 3.0,
+    "default": "closed"
+  },
+  "cube": {
+    "body": "cube",
+    "joint": "cube",
+    "size": 0.03,
+    "defaultPose": {
+      "pos": [
+        0.0,
+        -0.265,
+        0.015
+      ],
+      "yaw": 0.0
+    }
+  },
+  "grasp": {
+    "approachHeight": 0.08,
+    "descendSpeed": 0.1,
+    "approachSpeed": 0.2,
+    "liftHeight": 0.08,
+    "liftSpeed": 0.1,
+    "closeSettle": 0.2,
+    "closeTimeout": 1.0,
+    "knockedDistance": 0.02,
+    "fixedJawOffset": 0.0101,
+    "verticalOffset": 1.570785757,
+    "rollOffset": -1.57079,
+    "region": {
+      "center": [
+        0.0,
+        -0.0452
+      ],
+      "rMin": 0.1212,
+      "rMax": 0.2612,
+      "maxAngle": 1.405
+    },
+    "success": {
+      "liftCheck": 0.05,
+      "hold": 1.0,
+      "timeLimit": 10.0
+    }
   },
   "policy": {
     "path": "policy/reach.bin",

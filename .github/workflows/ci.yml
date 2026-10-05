@@ -35,6 +35,13 @@ jobs:
         with:
           name: eval-learned
           path: web/eval/learned.json
+      # 002 FR-015/FR-016: the grasp numbers the info panel shows must be exactly what the shipped
+      # grasp controller measures (a miss of SC-003/SC-004 is reported, not failed).
+      - run: npm run eval:grasp --workspace web -- --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-grasp
+          path: shared/grasp-eval.json
       - uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -78,7 +85,7 @@ jobs:
         working-directory: web
       # Release checks for every rung: static-only (constitution gate 3) and the rung's e2e tags.
       # CI=true: load-time and fps are recorded, not asserted (no GPU on runners; see p1.spec.ts).
-      - run: npx playwright test --grep "@p1|@p2|@p3"
+      - run: npx playwright test --grep "@p1|@p2|@p3|@g1|@g2|@g3"
         working-directory: web
       - uses: actions/upload-artifact@v4
         if: failure()

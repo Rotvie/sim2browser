@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 import mujoco
 import numpy as np
 
+from .grasp import Arm as GraspArm
+from .grasp import fixed_jaw_offset, grasp_region, wrist_offsets
 from .spec import (
     MODEL_PATH,
     PARITY_VERSION,
@@ -30,7 +33,10 @@ TIMESTEP = 0.002
 SUBSTEPS = 10
 CONTROL_HZ = 50
 DELTA_SCALE = 0.05
-MIN_Z = 0.01
+MIN_Z = 0.01  # lowest target the visitor can set (UI clamp, reachability grid)
+# Lowest target the evaluation and training sample (002 research R7): with the fingers 6 mm or more
+# below the tip, lower targets force the gripper into the floor in many orientations.
+EVAL_MIN_Z = 0.04
 # Demo workspace = in front of the base (research R12): the tip must be at least this far in
 # front of the base axis (−y). Behind-the-base points need the arm folded back over itself.
 FRONT_MARGIN = 0.02
@@ -38,6 +44,27 @@ VOXEL = 0.01
 REACH_SAMPLES = 200_000
 WORKSPACE_EXTRA_SAMPLES = 800_000
 WORKSPACE_PATH = "workspace.bin"
+BASE_EXCLUSION_RADIUS = 0.05
+GRIPPER = {
+    "joint": "Jaw",
+    "actuator": "Jaw",
+    "open": 1.0,  # 6-9 cm between the pads (research R3)
+    "closed": -0.174,  # the jaw's lower limit: squeezes a 30 mm cube
+    "maxSpeed": 3.0,
+    "default": "closed",
+}
+# Scripted grasp (research R5); tune here, never in the browser code.
+GRASP = {
+    "approachHeight": 0.08,
+    "descendSpeed": 0.1,
+    "approachSpeed": 0.2,
+    "liftHeight": 0.08,
+    "liftSpeed": 0.1,
+    "closeSettle": 0.2,
+    "closeTimeout": 1.0,
+    "knockedDistance": 0.02,
+}
+GRASP_SUCCESS = {"liftCheck": 0.05, "hold": 1.0, "timeLimit": 10.0}
 
 
 def load_model() -> mujoco.MjModel:
@@ -59,10 +86,12 @@ def tip_samples(model: mujoco.MjModel, n: int, rng: np.random.Generator) -> np.n
     lim = joint_limits(model)
     data = mujoco.MjData(model)
     tip = model.site("tip").id
+    qadr = [model.joint(j).qposadr[0] for j in JOINTS]
+    data.qpos[:] = model.qpos0
     out = np.empty((n, 3))
     qs = rng.uniform(lim[:, 0], lim[:, 1], size=(n, len(JOINTS)))
     for i, q in enumerate(qs):
-        data.qpos[:] = q
+        data.qpos[qadr] = q
         mujoco.mj_kinematics(model, data)
         out[i] = data.site_xpos[tip]
     return out
@@ -90,7 +119,7 @@ def build_workspace(points: np.ndarray) -> tuple[np.ndarray, list[float], list[i
 def base_parity(model: mujoco.MjModel) -> dict:
     rng = np.random.default_rng(0)
     data = mujoco.MjData(model)
-    mujoco.mj_kinematics(model, data)
+    mujoco.mj_kinematics(model, data)  # qpos0: arm at zero, cube at its default pose
     shoulder = data.site_xpos[model.site("shoulder").id].copy()
     base_axis = data.xpos[model.body("Rotation_Pitch").id][:2].copy()
 
@@ -140,9 +169,10 @@ def base_parity(model: mujoco.MjModel) -> dict:
             "margin": 0.01,
             "hysteresis": 0.005,
             "minZ": MIN_Z,
+            "evalMinZ": EVAL_MIN_Z,
             "frontMargin": FRONT_MARGIN,
             "baseAxisXY": base_axis.round(6).tolist(),
-            "baseExclusionRadius": 0.05,
+            "baseExclusionRadius": BASE_EXCLUSION_RADIUS,
             "workspace": {
                 "path": WORKSPACE_PATH,
                 "sha256": sha256_file(SHARED / WORKSPACE_PATH),
@@ -161,6 +191,53 @@ def base_parity(model: mujoco.MjModel) -> dict:
             "reachStandoff": 0.02,
             "neutralPose": neutral.round(6).tolist(),
         },
+        "gripper": GRIPPER,
+        "cube": cube_parity(model),
+        "grasp": grasp_parity(model, base_axis.tolist(), max_reach),
+    }
+
+
+def cube_parity(model: mujoco.MjModel) -> dict:
+    body = model.body("cube")
+    q = body.quat
+    return {
+        "body": "cube",
+        "joint": "cube",
+        "size": round(2 * float(model.geom("cube").size[0]), 6),
+        "defaultPose": {
+            "pos": [round(float(v), 6) for v in body.pos],
+            "yaw": round(
+                math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] ** 2 + q[3] ** 2)), 6
+            ),
+        },
+    }
+
+
+def grasp_parity(model: mujoco.MjModel, base_xy: list[float], max_reach: float) -> dict:
+    jaw = model.joint(GRIPPER["joint"]).range
+    if not jaw[0] <= GRIPPER["closed"] < GRIPPER["open"] <= jaw[1]:
+        raise SystemExit(f"gripper open/closed outside the jaw range {jaw}")
+    half = float(model.geom("cube").size[0])
+    vertical, roll = wrist_offsets(GraspArm(model))
+    region = grasp_region(
+        model,
+        base_xy,
+        vertical,
+        half,
+        GRASP["approachHeight"],
+        GRIPPER["open"],
+        max_reach,
+        FRONT_MARGIN,
+        # The cube (half diagonal) stays clear of the base exclusion zone.
+        BASE_EXCLUSION_RADIUS + half * math.sqrt(2) + 0.01,
+    )
+    return {
+        **GRASP,
+        "fixedJawOffset": fixed_jaw_offset(model, half),
+        "verticalOffset": round(vertical, 9),
+        "rollOffset": round(roll, 9),
+        "region": region,
+        "success": GRASP_SUCCESS,
     }
 
 
@@ -239,7 +316,8 @@ def main() -> None:
     write_parity(parity)
     print(
         f"wrote shared/parity.json: maxReach={parity['reach']['maxReach']:.3f} m, "
-        f"workspace dims={parity['reach']['workspace']['dims']}"
+        f"workspace dims={parity['reach']['workspace']['dims']}, "
+        f"grasp region={parity['grasp']['region']}"
         + (f", policy from {args.run}" if args.run else "")
     )
 

@@ -2,7 +2,9 @@
  * Headless evaluation of the shipped controllers (SC-003, SC-004, SC-009). No DOM: runs in Node on
  * the same Session the worker uses.
  */
-import type { ControlMode } from "../control/modes";
+import type { ControlMode, GraspFailure } from "../control/modes";
+import { MANUAL } from "../control/modes";
+import { yawQuat } from "./cube";
 import type { Sim } from "./mujoco";
 import type { Parity } from "./parity";
 import type { Session } from "./session";
@@ -20,7 +22,7 @@ export function mulberry32(seed: number): () => number {
 
 /**
  * Reachable by construction: the tip position of a uniform random joint configuration within
- * limits, rejecting points below minZ, inside the base exclusion radius, or outside the front
+ * limits, rejecting points below evalMinZ, inside the base exclusion radius, or outside the front
  * workspace (behind the base).
  */
 export function reachableTargets(
@@ -38,7 +40,7 @@ export function reachableTargets(
       return lo + (sim.limits[2 * j + 1] - lo) * rand();
     });
     const p = sim.fkSite(parity.tipSite, q);
-    if (p[2] < parity.reach.minZ) continue;
+    if (p[2] < parity.reach.evalMinZ) continue;
     if (p[1] > by - parity.reach.frontMargin) continue;
     if (Math.hypot(p[0] - bx, p[1] - by) < parity.reach.baseExclusionRadius) continue;
     out.push(p);
@@ -118,4 +120,82 @@ export function runEpisode(
   }
   const r = detectSuccess(tipTrace, session.target.pos, parity.success, parity.controlHz);
   return { ...r, tipTrace };
+}
+
+/**
+ * Grasp success (spec SC-003, research R6): the cube centre at least `liftCheck` above its
+ * resting height and held, continuously for `hold` seconds, with the hold complete within
+ * `timeLimit` of the start. One definition for the grasp controller and the evaluation.
+ */
+export class GraspJudge {
+  /** Time the current lifted-and-held run began, or null. */
+  private since: number | null = null;
+  /** Start of the successful hold, once complete. */
+  liftTime: number | null = null;
+
+  constructor(
+    private readonly success: Parity["grasp"]["success"],
+    private readonly restZ: number,
+  ) {}
+
+  /** Feed one sample (time since the attempt started); returns true once successful. */
+  update(t: number, cubeZ: number, held: boolean): boolean {
+    if (this.liftTime !== null) return true;
+    if (held && cubeZ >= this.restZ + this.success.liftCheck) this.since ??= t;
+    else this.since = null;
+    if (this.since !== null && t - this.since >= this.success.hold - 1e-9) {
+      if (t > this.success.timeLimit + 1e-9) return false;
+      this.liftTime = this.since;
+      return true;
+    }
+    return false;
+  }
+}
+
+export interface GraspPlacement {
+  pos: [number, number];
+  yaw: number;
+}
+
+/**
+ * Cube placements for the grasp evaluation (contracts/grasp-eval.md): centres uniform by area in
+ * the graspable region (an annulus sector), yaw uniform in [0, pi/2) (the cube's symmetry).
+ */
+export function graspPlacements(parity: Parity, n: number, seed: number): GraspPlacement[] {
+  const rand = mulberry32(seed);
+  const { center, rMin, rMax, maxAngle } = parity.grasp.region;
+  return Array.from({ length: n }, () => {
+    const r = Math.sqrt(rMin * rMin + rand() * (rMax * rMax - rMin * rMin));
+    const a = (2 * rand() - 1) * maxAngle;
+    const yaw = (rand() * Math.PI) / 2;
+    return { pos: [center[0] + r * Math.sin(a), center[1] - r * Math.cos(a)], yaw };
+  });
+}
+
+export interface GraspEpisode {
+  success: boolean;
+  /** Seconds from the start to the start of the successful hold. */
+  timeToLift: number | null;
+  failure: GraspFailure | null;
+}
+
+/** From the reset state with the cube placed (and settled 0.2 s), run one scripted grasp. */
+export function runGraspEpisode(session: Session, placement: GraspPlacement): GraspEpisode {
+  const { sim, parity } = session;
+  session.setMode(MANUAL); // holds the pose while the cube settles
+  session.reset();
+  sim.setCubePose(
+    [placement.pos[0], placement.pos[1], parity.cube.size / 2],
+    yawQuat(placement.yaw),
+  );
+  for (let k = 0; k < 0.2 * parity.controlHz; k++) session.controlStep();
+  if (!session.setMode("grasp")) throw new Error("the grasp controller is not available");
+  const steps = (parity.grasp.success.timeLimit + 1) * parity.controlHz;
+  for (let k = 0; k < steps; k++) {
+    session.controlStep();
+    const g = session.snapshot().grasp!;
+    if (g.phase === "done") return { success: true, timeToLift: g.liftTime, failure: null };
+    if (g.phase === "failed") return { success: false, timeToLift: null, failure: g.failure };
+  }
+  return { success: false, timeToLift: null, failure: "timeout" };
 }

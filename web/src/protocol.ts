@@ -1,12 +1,17 @@
 /** Main thread <-> sim worker messages (contracts/worker-protocol.md). */
 import type { ControlMode, ModeChangeReason } from "./control/modes";
-import type { ParityErrorCode } from "./sim/parity";
+import type { GraspRegion, GripperCommand, Parity, ParityErrorCode } from "./sim/parity";
 
 export type ToWorker =
   | { type: "init"; baseUrl: string }
   | { type: "dragJoint"; joint: number; angle: number }
   | { type: "setTarget"; pos: [number, number, number] }
   | { type: "setMode"; mode: ControlMode }
+  | { type: "setGripper"; command: GripperCommand }
+  /** Place the cube on the floor at (x, y); ignored while it is held. */
+  | { type: "setCube"; pos: [number, number] }
+  /** In grasp mode: start a new attempt from the current state. */
+  | { type: "regrasp" }
   | { type: "reset" }
   | { type: "visibility"; hidden: boolean };
 
@@ -24,7 +29,13 @@ export interface Snapshot {
   jointAxis: Float64Array;
   target: Float64Array;
   reachable: boolean;
+  /** Jaw joint position (rad) and the gripper command. */
+  jaw: number;
+  gripper: GripperCommand;
+  cube: { pos: Float64Array; quat: Float64Array; held: boolean; graspable: boolean };
   mode: ControlMode;
+  /** The scripted grasp's progress, while it is in charge. */
+  grasp?: import("./control/modes").GraspState;
   /** From a controller that can be inspected (the learned policy), once it is loaded. */
   policyStep?: import("./control/learned").PolicyStep;
   /** True when policyStep comes from the controller in charge (not a what-if). */
@@ -49,6 +60,9 @@ export interface ReadyInfo {
   policyJoints: string[];
   /** Observation fields (labels for the panel). */
   observation: import("./sim/parity").Parity["observation"]["fields"];
+  gripper: Parity["gripper"];
+  cube: { size: number; body: string };
+  graspRegion: GraspRegion;
 }
 
 export type ErrorCode = ParityErrorCode | "asset-load" | "internal";

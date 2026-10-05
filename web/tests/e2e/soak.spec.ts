@@ -1,5 +1,7 @@
 /**
- * SC-005 soak: a seeded random walk over the actions this build offers, for 10 minutes.
+ * SC-005 soak (001) and 002 SC-006: a seeded random walk over the actions this build offers, for
+ * 10 minutes: target and joint drags, camera, reset, mode switches (including Grasp), and from
+ * 002 gripper toggles (also closing on nothing), cube drags, "Grasp again" and tab hide/show.
  * Actions are discovered from the page (mode buttons appear from P2 on), so the same spec is the
  * release check for every rung. Run: npm run test:e2e -- --grep @soak --project desktop-chromium
  */
@@ -32,11 +34,17 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
     };
     w.__soak = { bad: [], lastT: -1, lastAt: performance.now(), maxGap: 0 };
     const limits = window.__sim2browser.limits();
+    // A hidden tab pauses the simulation (001 edge case): do not count that as a stall.
+    document.addEventListener("visibilitychange", () => {
+      w.__soak.lastT = -1;
+      w.__soak.lastAt = performance.now();
+    });
     const check = () => {
       const s = window.__sim2browser.snapshot as unknown as {
         t: number;
         q: Float64Array;
         tip: Float64Array;
+        cube?: { pos: Float64Array };
       };
       const now = performance.now();
       if (s && s.t !== w.__soak.lastT) {
@@ -46,10 +54,16 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
         w.__soak.lastAt = now;
         const vals = [...s.q, ...s.tip];
         if (vals.some((v) => !Number.isFinite(v))) w.__soak.bad.push(`NaN at t=${s.t}`);
+        // Soft limits: < 0.01 rad free, < 0.02 rad with the arm pressed into the floor (002).
         s.q.forEach((v, j) => {
-          if (v < limits[2 * j] - 0.01 || v > limits[2 * j + 1] + 0.01)
+          if (v < limits[2 * j] - 0.02 || v > limits[2 * j + 1] + 0.02)
             w.__soak.bad.push(`joint ${j}=${v} out of limits`);
         });
+        const c = s.cube?.pos;
+        if (c) {
+          if (c[2] < 0.0135) w.__soak.bad.push(`cube ${c[2].toFixed(4)} m: into the floor`);
+          if (Math.hypot(c[0], c[1], c[2]) > 2) w.__soak.bad.push(`cube flew off: ${[...c]}`);
+        }
       }
       requestAnimationFrame(check);
     };
@@ -63,6 +77,18 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
   let nextModeSwitch = Date.now() + 5000 + rand() * 15_000;
   let actions = 0;
   let targetDrags = 0;
+  let cubeDrags = 0;
+  const drag = async (x: number, y: number, dx: number, dy: number) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    for (let i = 1; i <= 20; i++) {
+      await page.mouse.move(x + (dx * i) / 20, y + (dy * i) / 20);
+      await page.waitForTimeout(16);
+    }
+    await page.mouse.up();
+  };
+  const onScreen = (pt: [number, number] | null): pt is [number, number] =>
+    !!pt && pt[0] > 0 && pt[1] > 0 && pt[0] < vp.width && pt[1] < vp.height;
 
   while (Date.now() < end) {
     const r = rand();
@@ -71,7 +97,7 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
       const n = await modeButtons.count();
       if (n > 0) await modeButtons.nth(Math.floor(rand() * n)).click();
       nextModeSwitch = Date.now() + 5000 + rand() * 15_000;
-    } else if (r < 0.35) {
+    } else if (r < 0.25) {
       // Target drag (P2 on), sometimes far enough to leave the reachable workspace.
       const pt = await page.evaluate(() =>
         "targetScreenPoint" in window.__sim2browser
@@ -91,7 +117,7 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
         await page.mouse.up();
         targetDrags++;
       }
-    } else if (r < 0.6) {
+    } else if (r < 0.4) {
       const pt = await page.evaluate(
         (l) => window.__sim2browser.linkScreenPoint(l),
         links[Math.floor(rand() * links.length)],
@@ -107,6 +133,28 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
         }
         await page.mouse.up();
       }
+    } else if (r < 0.5) {
+      // 002: drag the cube somewhere on the floor (refused while held).
+      const pt = await page.evaluate(() => window.__sim2browser.cubeScreenPoint());
+      if (onScreen(pt)) {
+        await drag(pt[0], pt[1], (rand() - 0.5) * 300, (rand() - 0.5) * 200);
+        cubeDrags++;
+      }
+    } else if (r < 0.58) {
+      await page.keyboard.press("g"); // 002: open/close the gripper, around the cube or nothing
+    } else if (r < 0.63) {
+      const again = page.getByRole("button", { name: "Grasp again" });
+      if (await again.isVisible()) await again.click();
+    } else if (r < 0.66) {
+      // 002: tab hidden for a while (mid-grasp sometimes), then back.
+      const setHidden = (hidden: boolean) =>
+        page.evaluate((h) => {
+          Object.defineProperty(document, "hidden", { value: h, configurable: true });
+          document.dispatchEvent(new Event("visibilitychange"));
+        }, hidden);
+      await setHidden(true);
+      await page.waitForTimeout(500 + rand() * 1500);
+      await setHidden(false);
     } else if (r < 0.8) {
       const x = 40 + rand() * 120;
       const y = 120 + rand() * (vp.height - 240);
@@ -128,6 +176,7 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
   );
   info.annotations.push({ type: "actions", description: String(actions) });
   info.annotations.push({ type: "target-drags", description: String(targetDrags) });
+  info.annotations.push({ type: "cube-drags", description: String(cubeDrags) });
   info.annotations.push({ type: "max-snapshot-gap-ms", description: soak.maxGap.toFixed(1) });
   expect(soak.bad.slice(0, 5)).toEqual([]);
   expect(soak.maxGap).toBeLessThanOrEqual(500);
