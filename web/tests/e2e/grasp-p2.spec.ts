@@ -48,15 +48,36 @@ test.describe("002 P2: scripted grasp @g2", () => {
     await expect(chip).toContainText("Failed: cube out of reach", { timeout: 5000 });
   });
 
+  // Data model: leaving the grasp keeps the gripper command. The grasp itself may still change
+  // it before the drag reaches the worker (slow runners), so compare across the handover itself.
   test("dragging the target mid-grasp hands over to the baseline, gripper unchanged", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Grasp", exact: true }).click();
-    await expect.poll(async () => (await state(page)).phase, { timeout: 5000 }).toBe("descend");
-    const before = (await state(page)).gripper;
+    await expect.poll(async () => (await state(page)).phase, { timeout: 5000 }).toBe("approach");
+    // Record, frame by frame, the gripper in the last grasp snapshot and the first baseline one.
+    await page.evaluate(() => {
+      const w = window as unknown as { __handover: { last?: string; first?: string } };
+      w.__handover = {};
+      const rec = () => {
+        const s = window.__sim2browser.snapshot!;
+        if (s.mode === "grasp") w.__handover.last = s.gripper;
+        else if (s.mode === "baseline" && w.__handover.first === undefined) {
+          w.__handover.first = s.gripper;
+          return;
+        }
+        requestAnimationFrame(rec);
+      };
+      requestAnimationFrame(rec);
+    });
     await dragTarget(page, 40, -30);
     await expect.poll(async () => (await state(page)).mode).toBe("baseline");
-    expect((await state(page)).gripper).toBe(before);
+    await page.waitForTimeout(1000);
+    const h = await page.evaluate(
+      () => (window as unknown as { __handover: { last?: string; first?: string } }).__handover,
+    );
+    expect(h.first).toBe(h.last);
+    expect((await state(page)).gripper).toBe(h.first);
     await expect(page.getByRole("status")).toBeHidden();
   });
 });
