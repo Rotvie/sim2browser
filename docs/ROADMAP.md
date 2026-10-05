@@ -27,6 +27,9 @@ plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/00
 - [ ] SC-001 sits on the 3 s edge on mobile-chromium (≈ 3.00 s for both 001 and 002 on the
       development machine).
 - [ ] Visitor test for grasping by hand (T059) and real-phone checks (T060).
+- [ ] WebKit performance: since the contacts, CI's mobile-webkit runner shows 120–140 ms worker
+      stalls in the circular-drag check (CI tolerance 150 ms, 100 ms elsewhere). Profile the worker
+      on WebKit and confirm on a real iPhone.
 
 ## Open items from 001
 
