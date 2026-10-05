@@ -122,10 +122,6 @@ export function createSession(
   const cubeHeld = () =>
     sim.bodiesInContact(parity.cube.body, "Fixed_Jaw") &&
     sim.bodiesInContact(parity.cube.body, "Moving_Jaw");
-  // Every moving arm body (the base is static and fenced off by clampCubePlacement).
-  const armBodies = sim.bodyNames.filter(
-    (_, b) => sim.bodyJoint[b] >= 0 || sim.bodyNames[b] === "Moving_Jaw",
-  );
 
   return {
     sim,
@@ -184,7 +180,7 @@ export function createSession(
       const before = sim.cubePose();
       const [x, y] = clampCubePlacement(xy, parity);
       sim.setCubePose([x, y, parity.cube.size / 2], yawQuat(cubeYaw(before.quat)));
-      if (armBodies.some((b) => sim.bodiesInContact(parity.cube.body, b))) {
+      if (sim.armBodies.some((b) => sim.bodiesInContact(parity.cube.body, b))) {
         sim.setCubePose(before.pos, before.quat);
         return false;
       }

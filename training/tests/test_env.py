@@ -84,10 +84,83 @@ def test_episode_length_and_target_changes(env):
     assert moved >= 1
 
 
-def test_jaw_closed_and_cube_at_default_after_reset(env):
+def test_jaw_closed_and_cube_on_the_floor_after_reset(env):
+    # 003: the cube is placed randomly in training (test_resets_never_start_inside_floor_or_cube).
     env.reset(seed=5)
     p = env.parity
     assert env.model.nu == 6
     assert env.data.ctrl[env.jaw_aid] == p["gripper"]["closed"]
-    cube = env.model.joint(p["cube"]["joint"]).qposadr[0]
-    np.testing.assert_allclose(env.data.qpos[cube : cube + 2], p["cube"]["defaultPose"]["pos"][:2])
+    assert env.data.qpos[env.cube_qadr + 2] == pytest.approx(p["cube"]["size"] / 2)
+
+
+# --- 003: contact-robust episode setup and reward --------------------------------------------
+
+
+def _penetrating(env) -> bool:
+    m, d = env.model, env.data
+    for i in range(d.ncon):
+        c = d.contact[i]
+        b = {m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]}
+        if b & env.arm_bodies and (env.floor_geom in (c.geom1, c.geom2) or env.cube_body in b):
+            if c.dist < -0.001:
+                return True
+    return False
+
+
+def _in_cube_box(env, p) -> bool:
+    c = env.data.qpos[env.cube_qadr : env.cube_qadr + 3]
+    half = env.parity["cube"]["size"] / 2 + env.sampling.target_cube_margin
+    return bool(np.all(np.abs(np.asarray(p) - c) <= half))
+
+
+def test_resets_never_start_inside_floor_or_cube(env):
+    rng = np.random.default_rng(0)
+    p = env.parity
+    default, placed = 0, 0
+    bx, by = p["reach"]["baseAxisXY"]
+    for _ in range(2000):
+        env.reset(seed=int(rng.integers(1 << 30)))
+        assert not _penetrating(env)
+        assert not _in_cube_box(env, env.target)
+        c = env.data.qpos[env.cube_qadr : env.cube_qadr + 3]
+        if np.allclose(c, p["cube"]["defaultPose"]["pos"]):
+            default += 1
+        else:
+            placed += 1
+            r = np.hypot(c[0] - bx, c[1] - by)
+            lo, hi = env.sampling.cube_r
+            assert lo - 1e-9 <= r <= hi + 1e-9
+            assert abs(np.arctan2(c[0] - bx, -(c[1] - by))) <= env.sampling.cube_max_angle + 1e-9
+    assert 0.15 <= default / 2000 <= 0.25
+
+
+def test_reset_gives_up_loudly(env, monkeypatch):
+    import reach.env as E
+
+    monkeypatch.setattr(E, "_arm_penetrates", lambda env: True)
+    with pytest.raises(RuntimeError):
+        env.reset(seed=1)
+
+
+def test_reward_caps_jerk_and_penalizes_contacts(env):
+    env.reset(seed=11)
+    w = env.reward_w
+    # Drive the gripper hard into the floor: fully extended down.
+    hit = False
+    for _ in range(80):
+        _, _, _, _, info = env.step(np.array([0.0, 1.0, -1.0, 1.0], dtype=np.float32))
+        assert info["jerk_sq"] <= w.jerk_cap + 1e-9
+        assert info["jerk_sq_raw"] >= info["jerk_sq"]
+        hit |= info["floor"]
+    assert hit, "the test motion should reach the floor"
+
+
+def test_contact_terms_are_not_ramped(env):
+    env.reset(seed=12)
+    env.penalty_scale = 0.0
+    r_no = env._contact_penalty(False, False)
+    r_floor = env._contact_penalty(True, False)
+    r_both = env._contact_penalty(True, True)
+    assert r_no == 0.0
+    assert r_floor == pytest.approx(-env.reward_w.floor)
+    assert r_both == pytest.approx(-env.reward_w.floor - env.reward_w.cube)

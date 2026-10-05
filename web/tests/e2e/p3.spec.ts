@@ -101,6 +101,9 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     await expect(panel).toContainText("Measured results");
     await expect(panel).toContainText("Reached target");
     await expect(panel).toContainText("Tip jerk vs baseline");
+    // 003 SC-003: contact rates, from the same evaluation (header metrics).
+    await expect(panel).toContainText("Touched the floor");
+    await expect(panel).toContainText("Moved the cube");
   });
 
   test("a corrupted policy falls back to Baseline with a notice", async ({ page }) => {

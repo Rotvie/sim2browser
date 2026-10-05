@@ -88,7 +88,15 @@ export function createInfoPanel(
       const results = m
         ? `<dl>
             <dt>Reached target</dt><dd>${pct(m.successRate)} <span class="${m.successRate >= 0.95 ? "ok" : "miss"}">(target ≥ 95%)</span></dd>
-            <dt>Tip jerk vs baseline</dt><dd>${(m.jerkRatioVsBaseline * 100).toFixed(0)}% <span class="${m.jerkRatioVsBaseline <= 0.7 ? "ok" : "miss"}">(target ≤ 70%)</span></dd>
+            <dt>Tip jerk vs baseline</dt><dd>${(m.jerkRatioVsBaseline * 100).toFixed(0)}% <span class="${m.jerkRatioVsBaseline <= 0.7 ? "ok" : "miss"}">(target ≤ 70%)</span></dd>${
+              m.floorContactRate !== undefined
+                ? `<dt>Touched the floor</dt><dd>${pct(m.floorContactRate)} <span class="${m.floorContactRate <= 0.01 ? "ok" : "miss"}">(target ≤ 1%)</span></dd>`
+                : ""
+            }${
+              m.cubeMovedRate !== undefined
+                ? `<dt>Moved the cube</dt><dd>${pct(m.cubeMovedRate)} <span class="${m.cubeMovedRate <= 0.02 ? "ok" : "miss"}">(target ≤ 2%)</span></dd>`
+                : ""
+            }
           </dl>
           <p class="note">Measured on ${m.n ?? 100} random reachable targets (at least 4 cm above the floor), 1 cm tolerance,
             within 2 s. Numbers are shown as measured, including any shortfall.</p>`

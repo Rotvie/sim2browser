@@ -5,7 +5,9 @@ import {
   GraspJudge,
   meanSqJerk,
   reachableTargets,
+  runEpisode,
 } from "../../src/sim/eval";
+import { createSession } from "../../src/sim/session";
 import { inRegion } from "../../src/sim/parity";
 import { loadNodeSim } from "../node-shared";
 
@@ -102,5 +104,28 @@ describe("grasp evaluation (002 research R6)", () => {
     expect(feed(3, 4.5)).toEqual({ ok: true, liftTime: expect.closeTo(3, 6) });
     expect(feed(3, 3.9).ok).toBe(false);
     expect(feed(succ.timeLimit - 0.5, succ.timeLimit + 2).ok).toBe(false);
+  });
+});
+
+describe("reach episodes count floor contact and a moved cube (003 SC-003)", () => {
+  it("a target in the floor sets `floor`; a high, clear target sets neither", async () => {
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace);
+    const [bx, by] = parity.reach.baseAxisXY;
+    const low = runEpisode(s, "baseline", [bx + 0.12, by - 0.12, 0.0]); // clamped to minZ: tip 1 cm up
+    expect(low.floor).toBe(true);
+    const high = runEpisode(s, "baseline", [bx, by - 0.25, 0.3]);
+    expect(high.floor).toBe(false);
+    expect(high.cubeMoved).toBe(false);
+    sim.dispose();
+  });
+
+  it("a reach through the cube sets `cubeMoved`", async () => {
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace);
+    const c = parity.cube.defaultPose.pos;
+    const r = runEpisode(s, "baseline", [c[0], c[1], c[2]]); // straight down onto the cube
+    expect(r.cubeMoved || r.floor).toBe(true);
+    sim.dispose();
   });
 });

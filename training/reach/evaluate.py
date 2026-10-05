@@ -17,10 +17,10 @@ import mujoco
 import numpy as np
 from stable_baselines3 import PPO
 
-from .env import ReachEnv, apply_action, clamp_target, reset_scene
+from .env import ReachEnv, apply_action, clamp_target, contact_flags, reset_scene
 from .export import RUNS
 
-BASELINE_JERK = 278.3  # web/eval/baseline.json, seed 0 (m²/s⁶)
+BASELINE_JERK = 264.8  # v3 model: npm run eval -- --controller baseline --n 300 --seed 0 (m²/s⁶)
 
 
 def load(run: Path, checkpoint: str | None):
@@ -44,6 +44,7 @@ def evaluate(model, vecnorm, n: int, seed: int) -> dict:
     need = round(succ["hold"] * hz)
     steps = round((succ["timeLimit"] + 1) * hz)
     successes, jerks, settle, speeds = 0, [], [], []
+    floor_eps = cube_eps = 0  # 003 SC-003, same definitions as web/src/sim/eval.ts
     for _ in range(n):
         target = env.sample_reachable()
         reset_scene(env)
@@ -54,6 +55,8 @@ def evaluate(model, vecnorm, n: int, seed: int) -> dict:
         env.prev_action = np.zeros(env.na)
         trace = []
         obs = env.obs()
+        cube0 = env.data.qpos[env.cube_qadr : env.cube_qadr + 3].copy()
+        floor = moved = False
         for _ in range(steps):
             a, _ = model.predict(
                 vecnorm.normalize_obs(obs[None]).astype(np.float32), deterministic=True
@@ -63,6 +66,9 @@ def evaluate(model, vecnorm, n: int, seed: int) -> dict:
             )
             for _ in range(env.substeps):
                 mujoco.mj_step(env.model, env.data)
+            floor |= contact_flags(env)[0]
+            cube = env.data.qpos[env.cube_qadr : env.cube_qadr + 3]
+            moved |= float(np.linalg.norm(cube - cube0)) > 0.01
             env.prev_action = np.clip(a[0].astype(np.float64), -1, 1)
             trace.append(env.tip())
             speeds.append(np.abs(env.qd()))
@@ -80,6 +86,8 @@ def evaluate(model, vecnorm, n: int, seed: int) -> dict:
                     settle.append((k - need + 2) / hz)
                 break
         successes += ok
+        floor_eps += floor
+        cube_eps += moved
         j = (tr[3:] - 3 * tr[2:-1] + 3 * tr[1:-2] - tr[:-3]) * hz**3
         jerks.append(float(np.mean(np.sum(j**2, axis=1))))
     return {
@@ -87,6 +95,8 @@ def evaluate(model, vecnorm, n: int, seed: int) -> dict:
         "jerk": float(np.mean(jerks)),
         "jerk_ratio_vs_baseline": float(np.mean(jerks)) / BASELINE_JERK,
         "settle_p50": float(np.median(settle)) if settle else None,
+        "floor_rate": floor_eps / n,
+        "cube_rate": cube_eps / n,
         # Mean |joint speed| per joint (rad/s): exposes motion the tip metrics cannot see.
         "joint_speed": np.mean(speeds, axis=0).round(3).tolist(),
     }
@@ -104,7 +114,8 @@ def main() -> None:
     print(
         f"{args.run} {args.checkpoint or 'final'}: success {r['success']:.0%}, "
         f"jerk {r['jerk']:.1f} (ratio {r['jerk_ratio_vs_baseline']:.2f} vs baseline), "
-        f"settle p50 {r['settle_p50']}, mean |joint speed| {r['joint_speed']}"
+        f"settle p50 {r['settle_p50']}, floor {r['floor_rate']:.1%}, "
+        f"cube moved {r['cube_rate']:.1%}, mean |joint speed| {r['joint_speed']}"
     )
 
 

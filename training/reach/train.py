@@ -47,12 +47,66 @@ class PenaltyCurriculum(BaseCallback):
         return True
 
 
+class GatedRamp:
+    """003 (research R4): the smoothness penalty scale rises only while reaching works.
+
+    After each rollout whose mean tip-target distance is at or below `gate_dist`, the scale goes
+    up by rollout / (0.25 · total): 0 → 1 takes at least a quarter of the stage. It never goes
+    down. A fixed ramp applies full penalties on schedule, whether or not the policy reaches yet,
+    and can lock a seed into standing still (001 seed 2).
+    """
+
+    def __init__(self, total: int, rollout: int, gate_dist: float) -> None:
+        self.step = rollout / (0.25 * total)
+        self.gate_dist = gate_dist
+        self.scale = 0.0
+
+    def update(self, mean_dist: float) -> None:
+        if mean_dist <= self.gate_dist:
+            self.scale = min(1.0, self.scale + self.step)
+
+
+class PerformanceGatedRamp(BaseCallback):
+    """Applies GatedRamp: scale for the next rollout from the last rollout's mean distance."""
+
+    def __init__(self, total: int, gate_dist: float) -> None:
+        super().__init__()
+        self.total, self.gate_dist = total, gate_dist
+        self.ramp: GatedRamp | None = None
+        self.dists: list[float] = []
+
+    def _on_training_start(self) -> None:
+        rollout = self.model.n_steps * self.training_env.num_envs
+        self.ramp = GatedRamp(self.total, rollout, self.gate_dist)
+
+    def _on_rollout_start(self) -> None:
+        self.training_env.set_attr("penalty_scale", self.ramp.scale)
+        self.logger.record("reach/penalty_scale", self.ramp.scale)
+
+    def _on_step(self) -> bool:
+        self.dists.extend(float(i["dist"]) for i in self.locals["infos"])
+        return True
+
+    def _on_rollout_end(self) -> None:
+        if self.dists:
+            self.ramp.update(float(np.mean(self.dists)))
+        self.dists.clear()
+
+
 class Stats(BaseCallback):
     """Logs mean distance, settled fraction, jerk and action rate from step infos."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.buf: dict[str, list[float]] = {"dist": [], "settled": [], "jerk_sq": [], "rate": []}
+        self.buf: dict[str, list[float]] = {
+            "dist": [],
+            "settled": [],
+            "jerk_sq": [],
+            "jerk_sq_raw": [],
+            "rate": [],
+            "floor": [],
+            "cube_contact": [],
+        }
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -82,7 +136,12 @@ def main() -> None:
     ap.add_argument("--steps", type=int, default=5_000_000)
     ap.add_argument("--envs", type=int, default=12)
     ap.add_argument("--name", type=str, default="")
-    ap.add_argument("--ramp", type=float, default=0.5, help="penalty curriculum fraction")
+    ap.add_argument(
+        "--ramp",
+        default="0.5",
+        help='"gated" (003: penalties rise while reaching works) or a fixed-ramp fraction (001)',
+    )
+    ap.add_argument("--gate_dist", type=float, default=0.15, help="gated ramp: distance gate (m)")
     ap.add_argument("--resume", type=str, default="", help="continue from runs/<id> (final model)")
     for f in fields(RewardWeights):
         ap.add_argument(f"--w_{f.name}", type=float, default=getattr(REWARD, f.name))
@@ -131,6 +190,7 @@ def main() -> None:
                 "envs": args.envs,
                 "reward": weights,
                 "penalty_ramp": args.ramp,
+                "gate_dist": args.gate_dist if args.ramp == "gated" else None,
                 "reward_defaults": asdict(REWARD),
             },
             indent=2,
@@ -140,7 +200,9 @@ def main() -> None:
     model.learn(
         total_timesteps=args.steps,
         callback=[
-            PenaltyCurriculum(args.steps, args.ramp),
+            PerformanceGatedRamp(args.steps, args.gate_dist)
+            if args.ramp == "gated"
+            else PenaltyCurriculum(args.steps, float(args.ramp)),
             Stats(),
             CheckpointCallback(
                 save_freq=max(1, 5_000_000 // args.envs),

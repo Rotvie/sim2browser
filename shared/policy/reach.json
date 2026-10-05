@@ -40,6 +40,8 @@
     "successRate": 0.9466666666666667,
     "jerkRatioVsBaseline": 0.9309,
     "baselineSuccessRate": 1,
+    "floorContactRate": 0.006666666666666667,
+    "cubeMovedRate": 0,
     "n": 300,
     "seed": 0
   }

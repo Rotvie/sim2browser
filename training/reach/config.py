@@ -21,6 +21,12 @@ class RewardWeights:
     posture: float = 0.0
     # −w · ‖a‖²: small cost for commanding motion that does not help. Round 4 on.
     effort: float = 0.0
+    # 003 (contacts): the jerk term uses min(‖jerk‖², jerk_cap), ≈ p99 of contact-free motion, so an
+    # impact costs at most w_jerk · jerk_cap per step instead of swamping the reward.
+    jerk_cap: float = 5000.0
+    # −w per control step in which an arm body touches the floor / the cube (not ramped).
+    floor: float = 1.0
+    cube: float = 0.5
 
 
 @dataclass(frozen=True)
@@ -32,6 +38,13 @@ class Sampling:
     p_unreachable_behind: float = 0.05  # behind the base (outside the front workspace)
     p_moving_target: float = 0.5  # target glides to its new position (like a drag)
     p_random_start: float = 0.5  # start from a random pose instead of neutral + noise
+    # 003: the cube during reach training. At its default pose (the evaluation's) with this
+    # probability; otherwise uniform by area in an annulus sector in front of the arm.
+    p_cube_default: float = 0.2
+    cube_r: tuple[float, float] = (0.08, 0.40)
+    cube_max_angle: float = 1.396  # 80°
+    # Targets are resampled while inside the cube's box grown by this margin (m).
+    target_cube_margin: float = 0.04
 
 
 REWARD = RewardWeights()

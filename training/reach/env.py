@@ -72,6 +72,85 @@ def actuator_for(model: mujoco.MjModel, joint: str) -> int:
     return ids[0]
 
 
+def arm_body_ids(model: mujoco.MjModel, joints: list[str]) -> set[int]:
+    """Bodies of the arm that move (each body a joint moves, and the jaw): web Sim.armBodies."""
+    ids = {model.jnt_bodyid[model.joint(j).id] for j in joints}
+    return ids | {model.body("Moving_Jaw").id}
+
+
+def contact_flags(env: ReachEnv) -> tuple[bool, bool]:
+    """(arm touches the floor, arm touches the cube) in the current contact set."""
+    m, d = env.model, env.data
+    floor = cube = False
+    for i in range(d.ncon):
+        c = d.contact[i]
+        b1, b2 = m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]
+        arm1, arm2 = b1 in env.arm_bodies, b2 in env.arm_bodies
+        if not (arm1 or arm2):
+            continue
+        other, other_geom = (b2, c.geom2) if arm1 else (b1, c.geom1)
+        floor |= other_geom == env.floor_geom
+        cube |= other == env.cube_body
+    return floor, cube
+
+
+def _arm_penetrates(env: ReachEnv) -> bool:
+    """An arm body more than 1 mm inside the floor or the cube (after mj_forward)."""
+    m, d = env.model, env.data
+    for i in range(d.ncon):
+        c = d.contact[i]
+        if c.dist >= -0.001:
+            continue
+        b1, b2 = m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]
+        if (b1 in env.arm_bodies) == (b2 in env.arm_bodies):
+            continue
+        if env.floor_geom in (c.geom1, c.geom2) or env.cube_body in (b1, b2):
+            return True
+    return False
+
+
+MAX_ATTEMPTS = 100
+
+
+def place_cube(env: ReachEnv, rng: np.random.Generator) -> None:
+    """Cube at its default pose (p_cube_default) or uniform by area in front of the arm."""
+    p, s = env.parity, env.sampling
+    a = env.cube_qadr
+    if rng.random() < s.p_cube_default:
+        pos, yaw = p["cube"]["defaultPose"]["pos"], p["cube"]["defaultPose"]["yaw"]
+    else:
+        bx, by = p["reach"]["baseAxisXY"]
+        lo, hi = s.cube_r
+        r = np.sqrt(rng.uniform(lo * lo, hi * hi))
+        ang = rng.uniform(-s.cube_max_angle, s.cube_max_angle)
+        pos = [bx + r * np.sin(ang), by - r * np.cos(ang), p["cube"]["size"] / 2]
+        yaw = rng.uniform(0, np.pi / 2)
+    env.data.qpos[a : a + 3] = pos
+    env.data.qpos[a + 3 : a + 7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+
+
+def in_cube_box(env: ReachEnv, point: np.ndarray) -> bool:
+    c = env.data.qpos[env.cube_qadr : env.cube_qadr + 3]
+    half = env.parity["cube"]["size"] / 2 + env.sampling.target_cube_margin
+    return bool(np.all(np.abs(np.asarray(point) - c) <= half))
+
+
+def collision_free_reset(env: ReachEnv, rng: np.random.Generator, sample_pose) -> None:
+    """003 (research R2): cube placed, then an arm start pose that does not penetrate the floor
+    or the cube (resampled), with ctrl = pose. General: reused by later learned features."""
+    reset_scene(env)
+    place_cube(env, rng)
+    for _ in range(MAX_ATTEMPTS):
+        q = sample_pose()
+        env.data.qpos[env.qadr] = q
+        env.data.ctrl[env.aid] = q
+        env.data.qvel[:] = 0
+        mujoco.mj_forward(env.model, env.data)
+        if not _arm_penetrates(env):
+            return
+    raise RuntimeError(f"no collision-free start pose in {MAX_ATTEMPTS} attempts")
+
+
 def reset_scene(env: ReachEnv) -> None:
     """MuJoCo defaults (cube at its default pose), gripper closed, as web/src/sim/session.ts."""
     mujoco.mj_resetData(env.model, env.data)
@@ -118,6 +197,10 @@ class ReachEnv(gym.Env):
         self.jaw_aid = self.model.actuator(p["gripper"]["actuator"]).id
         self.jaw_qadr = self.model.joint(p["gripper"]["joint"]).qposadr[0]
         self.jaw_closed = p["gripper"]["closed"]
+        self.arm_bodies = arm_body_ids(self.model, p["joints"])
+        self.floor_geom = self.model.geom("floor").id
+        self.cube_body = self.model.body(p["cube"]["body"]).id
+        self.cube_qadr = self.model.joint(p["cube"]["joint"]).qposadr[0]
         self.tip_id = self.model.site(p["tipSite"]).id
         self.shoulder_id = self.model.site(p["shoulderSite"]).id
         self.hz = p["controlHz"]
@@ -177,6 +260,14 @@ class ReachEnv(gym.Env):
             return p
 
     def sample_target(self) -> np.ndarray:
+        """A target (001 mix), never inside the cube's box grown by target_cube_margin (003)."""
+        for _ in range(MAX_ATTEMPTS):
+            p = self._sample_target()
+            if not in_cube_box(self, p):
+                return p
+        raise RuntimeError(f"no target outside the cube in {MAX_ATTEMPTS} attempts")
+
+    def _sample_target(self) -> np.ndarray:
         s, rng = self.sampling, self.np_random
         u = rng.random()
         bx, by = self.reach["baseAxisXY"]
@@ -199,14 +290,15 @@ class ReachEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         rng = self.np_random
-        reset_scene(self)
-        if rng.random() < self.sampling.p_random_start:
-            q = rng.uniform(self.lim[:, 0], self.lim[:, 1])
-        else:
-            q = np.clip(self.neutral + rng.normal(0, 0.1, self.n), self.lim[:, 0], self.lim[:, 1])
-        self.data.qpos[self.qadr] = q
-        self.data.ctrl[self.aid] = q
-        mujoco.mj_forward(self.model, self.data)
+
+        def sample_pose() -> np.ndarray:
+            if rng.random() < self.sampling.p_random_start:
+                return rng.uniform(self.lim[:, 0], self.lim[:, 1])
+            return np.clip(
+                self.neutral + rng.normal(0, 0.1, self.n), self.lim[:, 0], self.lim[:, 1]
+            )
+
+        collision_free_reset(self, rng, sample_pose)
 
         self.t = 0
         self.prev_action = np.zeros(self.na)
@@ -241,13 +333,21 @@ class ReachEnv(gym.Env):
             if f >= 1.0:
                 self.glide = None
 
+    def _contact_penalty(self, floor: bool, cube: bool) -> float:
+        """003: explicit, unramped cost of touching the floor / the cube."""
+        return -self.reward_w.floor * floor - self.reward_w.cube * cube
+
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
         self.data.ctrl[self.aid] = apply_action(
             self.data.ctrl[self.aid], self.expand(action), self.delta_scale, self.lim
         )
+        floor = cube = False
         for _ in range(self.substeps):
             mujoco.mj_step(self.model, self.data)
+            f, c = contact_flags(self)
+            floor |= f
+            cube |= c
         self.t += 1
 
         tip = self.tip()
@@ -259,6 +359,8 @@ class ReachEnv(gym.Env):
         dist = float(np.linalg.norm(tip - self.target))
         settled = dist <= self.success["tolerance"] and speed < self.success["maxTipSpeed"]
         w = self.reward_w
+        jerk_raw = float(np.sum(jerk**2))
+        jerk_sq = min(jerk_raw, w.jerk_cap)
         rate = float(np.sum((action - self.prev_action) ** 2))
         posture = float(np.sum((self.q() - self.neutral)[self.act] ** 2))
         reward = (
@@ -266,13 +368,22 @@ class ReachEnv(gym.Env):
             + w.precision * (1.0 - np.tanh(dist / w.precision_scale))
             + w.success_bonus * float(settled)
             - self.penalty_scale * w.action_rate * rate
-            - self.penalty_scale * w.jerk * float(np.sum(jerk**2))
+            - self.penalty_scale * w.jerk * jerk_sq
             - self.penalty_scale * w.joint_speed * float(np.sum(self.qd()[self.act] ** 2))
             - self.penalty_scale * w.posture * posture
             - self.penalty_scale * w.effort * float(np.sum(action**2))
+            + self._contact_penalty(floor, cube)
         )
         self.prev_action = action
         self._advance_target()
         truncated = self.t >= self.sampling.episode_steps
-        info = {"dist": dist, "settled": settled, "jerk_sq": float(np.sum(jerk**2)), "rate": rate}
+        info = {
+            "dist": dist,
+            "settled": settled,
+            "jerk_sq": jerk_sq,
+            "jerk_sq_raw": jerk_raw,
+            "rate": rate,
+            "floor": floor,
+            "cube_contact": cube,
+        }
         return self.obs(), reward, False, truncated, info

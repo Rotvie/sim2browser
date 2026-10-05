@@ -25,8 +25,8 @@ reporting. Measurements go to `specs/003-contact-training/validation.md`.
 
 ## Phase 1: Setup
 
-- [ ] T001 Create `specs/003-contact-training/validation.md` (sections "Measurements", "Decisions"), seeded with research.md R1/R3/R4 numbers marked "planning probe, 2026-10-05"
-- [ ] T002 [P] Update the proxy baseline constant in `training/reach/evaluate.py`: `BASELINE_JERK` = the v3 baseline's mean squared tip jerk from `npm run eval -- --controller baseline --n 300 --seed 0` (264.8 on 2026-10-05; re-measure and cite the run in the comment)
+- [X] T001 Create `specs/003-contact-training/validation.md` (sections "Measurements", "Decisions"), seeded with research.md R1/R3/R4 numbers marked "planning probe, 2026-10-05"
+- [X] T002 [P] Update the proxy baseline constant in `training/reach/evaluate.py`: `BASELINE_JERK` = the v3 baseline's mean squared tip jerk from `npm run eval -- --controller baseline --n 300 --seed 0` (264.8 on 2026-10-05; re-measure and cite the run in the comment)
 
 ---
 
@@ -34,10 +34,10 @@ reporting. Measurements go to `specs/003-contact-training/validation.md`.
 
 **Purpose**: SC-003 must be measurable before any run is judged.
 
-- [ ] T003 [P] Test first in `web/tests/unit/eval.test.ts`: `runEpisode` returns `floor` (any arm–floor contact during the episode) and `cubeMoved` (cube centre displaced > 0.01 m from its start pose); a target forcing the arm into the floor sets `floor`, a quiet reach sets neither
-- [ ] T004 Implement in `web/src/sim/eval.ts` (`runEpisode` → `EpisodeResult` gains `floor`, `cubeMoved`; arm bodies = every body moved by a joint plus `Moving_Jaw`), then `web/scripts/eval.ts` (report `floorContactRate`, `cubeMovedRate`, `perTarget[].floor`, `perTarget[].cubeMoved`) and `web/scripts/eval-compare.ts` (print both with SC-003 verdicts "floor ≤ 1%", "cube ≤ 2%"; `--write-metrics` adds both to the header `metrics`), per `contracts/eval-report.md`
-- [ ] T005 [P] Same counters in the Python proxy `training/reach/evaluate.py` (`floor_rate`, `cube_rate`, same definitions), printed with the rest
-- [ ] T006 Measure the current policy `final-s1` with the counters (TS release evaluation, 300 targets, seed 0) and record the before numbers in `validation.md`
+- [X] T003 [P] Test first in `web/tests/unit/eval.test.ts`: `runEpisode` returns `floor` (any arm–floor contact during the episode) and `cubeMoved` (cube centre displaced > 0.01 m from its start pose); a target forcing the arm into the floor sets `floor`, a quiet reach sets neither
+- [X] T004 Implement in `web/src/sim/eval.ts` (`runEpisode` → `EpisodeResult` gains `floor`, `cubeMoved`; arm bodies = every body moved by a joint plus `Moving_Jaw`), then `web/scripts/eval.ts` (report `floorContactRate`, `cubeMovedRate`, `perTarget[].floor`, `perTarget[].cubeMoved`) and `web/scripts/eval-compare.ts` (print both with SC-003 verdicts "floor ≤ 1%", "cube ≤ 2%"; `--write-metrics` adds both to the header `metrics`), per `contracts/eval-report.md`
+- [X] T005 [P] Same counters in the Python proxy `training/reach/evaluate.py` (`floor_rate`, `cube_rate`, same definitions), printed with the rest
+- [X] T006 Measure the current policy `final-s1` with the counters (TS release evaluation, 300 targets, seed 0) and record the before numbers in `validation.md`
 
 ---
 
@@ -49,19 +49,19 @@ reporting. Measurements go to `specs/003-contact-training/validation.md`.
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] In `training/tests/test_env.py`: 2,000 resets with random seeds never start with an arm geom in contact with the floor or the cube at dist < −0.001; the cube is at `cube.defaultPose` in 15–25% of resets and otherwise within r ∈ [0.08, 0.40] m and |angle| ≤ 80°; no target inside the cube's box grown by 0.04 m; reset raises after 100 failed attempts (monkeypatched sampler)
-- [ ] T008 [P] [US1] In `training/tests/test_env.py`: reward terms: jerk penalty uses `min(‖jerk‖², jerk_cap)` while `info["jerk_sq_raw"]` is uncapped; `info["floor"]` / `info["cube_contact"]` set on contact steps and each subtracts `w_floor` / `w_cube` (not scaled by `penalty_scale`)
-- [ ] T009 [P] [US1] Create `training/tests/test_train.py`: the gated ramp starts at 0, advances by `ramp_step` only after rollouts with mean `dist` ≤ `gate_dist`, never decreases, caps at 1, and 0 → 1 takes ≥ 25% of the stage
+- [X] T007 [P] [US1] In `training/tests/test_env.py`: 2,000 resets with random seeds never start with an arm geom in contact with the floor or the cube at dist < −0.001; the cube is at `cube.defaultPose` in 15–25% of resets and otherwise within r ∈ [0.08, 0.40] m and |angle| ≤ 80°; no target inside the cube's box grown by 0.04 m; reset raises after 100 failed attempts (monkeypatched sampler)
+- [X] T008 [P] [US1] In `training/tests/test_env.py`: reward terms: jerk penalty uses `min(‖jerk‖², jerk_cap)` while `info["jerk_sq_raw"]` is uncapped; `info["floor"]` / `info["cube_contact"]` set on contact steps and each subtracts `w_floor` / `w_cube` (not scaled by `penalty_scale`)
+- [X] T009 [P] [US1] Create `training/tests/test_train.py`: the gated ramp starts at 0, advances by `ramp_step` only after rollouts with mean `dist` ≤ `gate_dist`, never decreases, caps at 1, and 0 → 1 takes ≥ 25% of the stage
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] `training/reach/config.py`: `RewardWeights` gains `jerk_cap: float = 5000.0`, `floor: float = 1.0`, `cube: float = 0.5`; `Sampling` gains `p_cube_default: float = 0.2`, `cube_r: tuple[float, float] = (0.08, 0.40)`, `cube_max_angle: float = 1.396`, `target_cube_margin: float = 0.04` (contracts/training-config.md)
-- [ ] T011 [US1] `training/reach/env.py`: `collision_free_reset(env, rng)` (general helper, reused by 004): place the cube (data-model "Episode setup"), sample the start pose until no arm–floor/cube contact with dist < −0.001 (`mj_forward`, check `data.contact`), sample the target until outside the grown cube box; max 100 attempts per field, else `RuntimeError`; `ReachEnv.reset` uses it; `sample_target`'s retargets during the episode also avoid the cube box
-- [ ] T012 [US1] `training/reach/env.py` `step`: per-step contact flags (any arm geom vs floor, vs cube) over the substeps; reward per data-model "Reward terms"; `info` gains `floor`, `cube_contact`, `jerk_sq_raw`; `jerk_sq` stays the capped value used in the reward
-- [ ] T013 [US1] `training/reach/train.py`: `PerformanceGatedRamp` callback (data-model "Penalty ramp"; `gate_dist` 0.15; `ramp_step` = rollout steps / (0.25 · total steps)); `--ramp gated|<fraction>` and `--gate_dist`; `Stats` logs `floor_rate`, `cube_rate`, `jerk_sq_raw`, and `penalty_scale` (contracts/training-config.md)
-- [ ] T014 [US1] `training/scripts/train_final.sh`: stage a `--ramp gated`; header records "recipe 003"; stages b/c unchanged
-- [ ] T015 [US1] Run `uv run pytest` and `uv run ruff check reach tests` in `training/`; all pass
-- [ ] T016 [US1] Pilot: 3 seeds × 10 M steps (`--ramp gated --name c3-pilot-s<seed>`), in the background; record dist, `jerk_sq_raw`, `floor_rate`, `penalty_scale` at 10 M per seed in `validation.md`; go/no-go per research R5. On no-go: adjust only `config.py` weights, document why, re-pilot
+- [X] T010 [US1] `training/reach/config.py`: `RewardWeights` gains `jerk_cap: float = 5000.0`, `floor: float = 1.0`, `cube: float = 0.5`; `Sampling` gains `p_cube_default: float = 0.2`, `cube_r: tuple[float, float] = (0.08, 0.40)`, `cube_max_angle: float = 1.396`, `target_cube_margin: float = 0.04` (contracts/training-config.md)
+- [X] T011 [US1] `training/reach/env.py`: `collision_free_reset(env, rng)` (general helper, reused by 004): place the cube (data-model "Episode setup"), sample the start pose until no arm–floor/cube contact with dist < −0.001 (`mj_forward`, check `data.contact`), sample the target until outside the grown cube box; max 100 attempts per field, else `RuntimeError`; `ReachEnv.reset` uses it; `sample_target`'s retargets during the episode also avoid the cube box
+- [X] T012 [US1] `training/reach/env.py` `step`: per-step contact flags (any arm geom vs floor, vs cube) over the substeps; reward per data-model "Reward terms"; `info` gains `floor`, `cube_contact`, `jerk_sq_raw`; `jerk_sq` stays the capped value used in the reward
+- [X] T013 [US1] `training/reach/train.py`: `PerformanceGatedRamp` callback (data-model "Penalty ramp"; `gate_dist` 0.15; `ramp_step` = rollout steps / (0.25 · total steps)); `--ramp gated|<fraction>` and `--gate_dist`; `Stats` logs `floor_rate`, `cube_rate`, `jerk_sq_raw`, and `penalty_scale` (contracts/training-config.md)
+- [X] T014 [US1] `training/scripts/train_final.sh`: stage a `--ramp gated`; header records "recipe 003"; stages b/c unchanged
+- [X] T015 [US1] Run `uv run pytest` and `uv run ruff check reach tests` in `training/`; all pass
+- [X] T016 [US1] Pilot: 3 seeds × 10 M steps (`--ramp gated --name c3-pilot-s<seed>`), in the background; record dist, `jerk_sq_raw`, `floor_rate`, `penalty_scale` at 10 M per seed in `validation.md`; go/no-go per research R5. On no-go: adjust only `config.py` weights, document why, re-pilot
 - [ ] T017 [US1] Full recipe: `scripts/train_final.sh <seed> c3` for seeds 0, 1, 2 in the background; when done, `uv run python -m reach.evaluate --run c3-s<seed> --n 300 --seed 999` per seed; record every seed (success, jerk ratio, floor and cube rates) in `validation.md` (SC-004)
 
 **Checkpoint**: a recipe that learns with contacts, reusable by 004.

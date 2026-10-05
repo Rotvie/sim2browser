@@ -41,7 +41,13 @@ const settleTimes: number[] = [];
 let jerkSum = 0;
 for (const target of targets) {
   const r = runEpisode(session, controller, target);
-  perTarget.push({ target: Array.from(target), success: r.success, settleTime: r.settleTime });
+  perTarget.push({
+    target: Array.from(target),
+    success: r.success,
+    settleTime: r.settleTime,
+    floor: r.floor,
+    cubeMoved: r.cubeMoved,
+  });
   jerkSum += meanSqJerk(r.tipTrace, parity.controlHz);
   if (r.settleTime !== null) settleTimes.push(r.settleTime);
 }
@@ -59,6 +65,9 @@ const report = {
   settleTimeP50: pct(settleTimes, 0.5),
   settleTimeP95: pct(settleTimes, 0.95),
   meanSqTipJerk: jerkSum / n,
+  // 003 SC-003: episodes in which the arm touched the floor / moved the cube by more than 1 cm.
+  floorContactRate: perTarget.filter((t) => t.floor).length / n,
+  cubeMovedRate: perTarget.filter((t) => t.cubeMoved).length / n,
   perTarget,
 };
 mkdirSync(dirname(out), { recursive: true });
@@ -67,7 +76,8 @@ writeFileSync(out, JSON.stringify(report, null, 2) + "\n");
 console.log(
   `${controller}: success ${(report.successRate * 100).toFixed(1)}% of ${n} (seed ${seed}), ` +
     `settle p50 ${report.settleTimeP50?.toFixed(2)} s, p95 ${report.settleTimeP95?.toFixed(2)} s, ` +
-    `mean squared tip jerk ${report.meanSqTipJerk.toFixed(1)} m²/s⁶ → ${out}`,
+    `mean squared tip jerk ${report.meanSqTipJerk.toFixed(1)} m²/s⁶, ` +
+    `floor ${(report.floorContactRate * 100).toFixed(1)}%, cube moved ${(report.cubeMovedRate * 100).toFixed(1)}% → ${out}`,
 );
 if (controller === "baseline" && report.successRate < 0.99) {
   console.error("SC-003 not met: baseline success rate below 99%");

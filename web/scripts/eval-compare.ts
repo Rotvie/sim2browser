@@ -13,6 +13,8 @@ import { parseArgs } from "node:util";
 
 const SUCCESS_TARGET = 0.95; // SC-004
 const JERK_RATIO_TARGET = 0.7; // SC-009: learned mean squared tip jerk at least 30% lower
+const FLOOR_TARGET = 0.01; // 003 SC-003: at most 1% of episodes touch the floor
+const CUBE_TARGET = 0.02; // 003 SC-003: at most 2% of episodes move the cube > 1 cm
 
 const { values } = parseArgs({
   options: {
@@ -44,6 +46,14 @@ console.log(
   `SC-009 jerk ratio ${id}/baseline ${jerkRatio.toFixed(3)} (target ≤ ${JERK_RATIO_TARGET}): ` +
     verdict(jerkRatio <= JERK_RATIO_TARGET),
 );
+if (learned.floorContactRate !== undefined) {
+  console.log(
+    `SC-003 (003) ${id} floor contact ${pct(learned.floorContactRate)} (target ≤ ${pct(FLOOR_TARGET)}): ` +
+      `${verdict(learned.floorContactRate <= FLOOR_TARGET)}, cube moved ${pct(learned.cubeMovedRate)} ` +
+      `(target ≤ ${pct(CUBE_TARGET)}): ${verdict(learned.cubeMovedRate <= CUBE_TARGET)}; ` +
+      `baseline floor ${pct(baseline.floorContactRate)}, cube ${pct(baseline.cubeMovedRate)}`,
+  );
+}
 console.log(
   `settle p50 ${id} ${learned.settleTimeP50?.toFixed(2)} s vs baseline ${baseline.settleTimeP50?.toFixed(2)} s; ` +
     `baseline success ${pct(baseline.successRate)}`,
@@ -57,6 +67,8 @@ if (values["write-metrics"]) {
     successRate: learned.successRate,
     jerkRatioVsBaseline: Number(jerkRatio.toFixed(4)),
     baselineSuccessRate: baseline.successRate,
+    floorContactRate: learned.floorContactRate,
+    cubeMovedRate: learned.cubeMovedRate,
     n: learned.n,
     seed: learned.seed,
   };

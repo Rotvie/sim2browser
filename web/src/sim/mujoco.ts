@@ -48,6 +48,8 @@ export interface Sim {
   readonly bodyJoint: Int32Array;
   readonly bodyNames: string[];
   readonly bodyParent: Int32Array;
+  /** Bodies of the arm that move: every body a joint moves, and the jaw. */
+  readonly armBodies: string[];
   time(): number;
   q(): Float64Array;
   qd(): Float64Array;
@@ -182,6 +184,7 @@ export function createSim(mj: Mujoco, parity: Parity, files: ReadonlyMap<string,
     bodyJoint,
     bodyNames,
     bodyParent,
+    armBodies: bodyNames.filter((name, b) => bodyJoint[b] >= 0 || name === "Moving_Jaw"),
     time: () => data.time,
     q: () => gather(data.qpos, qposAdr),
     qd: () => gather(data.qvel, dofAdr),

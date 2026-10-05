@@ -98,7 +98,13 @@ export interface EpisodeResult {
   success: boolean;
   settleTime: number | null;
   tipTrace: Float64Array[];
+  /** 003 SC-003: an arm body touched the floor during the episode. */
+  floor: boolean;
+  /** 003 SC-003: the cube's centre moved more than 1 cm from where it started. */
+  cubeMoved: boolean;
 }
+
+const CUBE_MOVED = 0.01;
 
 /** From the neutral pose, set the target and run timeLimit + 1 s under the given controller. */
 export function runEpisode(
@@ -114,12 +120,18 @@ export function runEpisode(
   session.setTarget(target);
   const steps = Math.round((parity.success.timeLimit + 1) * parity.controlHz);
   const tipTrace: Float64Array[] = [];
+  const cube0 = sim.cubePose().pos;
+  let floor = false;
+  let cubeMoved = false;
   for (let k = 0; k < steps; k++) {
     session.controlStep();
     tipTrace.push(sim.sitePos(parity.tipSite));
+    floor ||= sim.armBodies.some((b) => sim.bodiesInContact(b, "world"));
+    const c = sim.cubePose().pos;
+    cubeMoved ||= Math.hypot(c[0] - cube0[0], c[1] - cube0[1], c[2] - cube0[2]) > CUBE_MOVED;
   }
   const r = detectSuccess(tipTrace, session.target.pos, parity.success, parity.controlHz);
-  return { ...r, tipTrace };
+  return { ...r, tipTrace, floor, cubeMoved };
 }
 
 /**

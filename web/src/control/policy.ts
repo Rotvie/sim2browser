@@ -20,7 +20,15 @@ export interface PolicyHeader {
     run?: string;
     reward?: Record<string, number>;
   };
-  metrics?: { successRate: number; jerkRatioVsBaseline: number; n?: number; seed?: number };
+  metrics?: {
+    successRate: number;
+    jerkRatioVsBaseline: number;
+    n?: number;
+    seed?: number;
+    /** 003: fractions of evaluation episodes touching the floor / moving the cube. */
+    floorContactRate?: number;
+    cubeMovedRate?: number;
+  };
 }
 
 export interface Policy {
