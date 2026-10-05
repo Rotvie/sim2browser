@@ -1,8 +1,8 @@
 # Roadmap
 
-Where the project stands and what comes next. The record of how feature 001 was built (spec,
-plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/001-arm-reach/),
-especially [`validation.md`](../specs/001-arm-reach/validation.md).
+Where the project stands and what comes next. The record of how each feature was built (spec,
+plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/001-arm-reach/) and
+[`specs/002-grasp/`](../specs/002-grasp/), especially their `validation.md`.
 
 ## Status (2026-10-04)
 
@@ -13,6 +13,20 @@ especially [`validation.md`](../specs/001-arm-reach/validation.md).
   controller is shown with `?lab`.
 - **Policy v2 deployed (2026-10-04)**: the policy controls 4 joints (Wrist_Roll held), parity.json
   version 2; shipped seed final-s1 of 3 (94.0% / jerk 0.715 on 300 targets).
+
+- **002-grasp: implemented, not deployed yet (2026-10-05).** Gripper and cube with contacts
+  (`so100.xml`, parity.json v3), grasping by hand, a scripted grasp (100% of 100 placements,
+  median 4.5 s to lift), measured numbers in the info panel, contact parity fixtures (≤ 5e-9).
+
+## Open items from 002
+
+- [ ] Retrain the reach policy with contacts. On the v3 model the 001 policy measures 94.7% and a
+      jerk ratio of 0.93 (300 targets ≥ 4 cm), because some paths brush the floor. Rerunning the
+      recipe unchanged failed (12.8% of episodes start inside the floor; impact jerk swamps the
+      reward): it needs collision-free start poses and an impact-robust smoothness term.
+- [ ] SC-001 sits on the 3 s edge on mobile-chromium (≈ 3.00 s for both 001 and 002 on the
+      development machine).
+- [ ] Visitor test for grasping by hand (T059) and real-phone checks (T060).
 
 ## Open items from 001
 
@@ -29,7 +43,7 @@ especially [`validation.md`](../specs/001-arm-reach/validation.md).
       non-converging runs (reported, not hidden), longer stage a.
 - [ ] Chore: bump GitHub Actions versions (Node 20 deprecation warnings).
 
-## Next feature: 002-grasp (toward manipulation)
+## Toward manipulation (002 done as step 1)
 
 Direction agreed: **learn in Python, run and evaluate in the browser**, with the same parity and
 honest-evaluation discipline. The SO-100 is the arm the LeRobot community uses for manipulation.

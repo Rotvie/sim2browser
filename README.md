@@ -3,7 +3,8 @@
 **Train in simulation, run a verified copy in the browser.** A robot arm you can play with in
 your browser. A policy learned with reinforcement learning
 controls it live: drag the blue target and the arm reaches for it. Switch to a classical
-controller at any moment and compare. No install and no server: MuJoCo physics, the neural
+controller at any moment and compare. Open the gripper and pick up the cube yourself, or watch a
+scripted grasp do it. No install and no server: MuJoCo physics, the neural
 network and the rendering all run in your browser tab.
 
 **Live demo: [rotvie.github.io/sim2browser](https://rotvie.github.io/sim2browser/)** (add `?lab` for the
@@ -22,6 +23,8 @@ example plug-in controller)
   Python MuJoCo. Parity tests replay the same actions on both engines and require them to agree:
   they match to about 1e-14 over 500-step trajectories, and the TypeScript network matches
   PyTorch to about 3e-7.
+- **Contacts and grasping.** The gripper, a cube and the floor collide. Parity holds with
+  contacts too: a full grasp-and-lift replays to within 5e-9 between Python and the browser.
 - **Plug in your own controller** in one file and one line, then evaluate it headlessly against
   the others ([below](#plug-in-your-own-controller)).
 - **Honest numbers.** The in-app info panel shows measured results, including where the learned
@@ -39,10 +42,21 @@ neutral pose to random reachable targets. Success = tip within 1 cm, nearly stil
 | **Learned (PPO, 2×128 MLP)**       | **95%**               | **94.0%**             | 1.12 s             | **0.68–0.72**         |
 | Jacobian transpose (lab example)   | 64%                   |                       | 1.56 s             | 1.86                  |
 
-The learned policy moves about **30% more smoothly** (lower mean squared tip jerk) than the
-classical reactive controller, at a similar speed, but is less precise: about 6% of targets stall
-1–2 cm short. Details, including every training run, are in
-[`specs/001-arm-reach/validation.md`](specs/001-arm-reach/validation.md).
+Those are the 001 measurements (no floor, no cube). With the floor and the cube of 002, measured
+on the same code path with targets at least 4 cm above the floor (300 targets): baseline 100%,
+learned **94.7%**, tip jerk ratio **0.93**. The learned policy was trained without a floor, and
+some of its paths now brush it; each impact is a jerk spike. Retraining it with contacts is an
+open item (`specs/002-grasp/validation.md`).
+
+**Grasping** (scripted, no learning; 100 random cube placements and turns in the reachable area):
+
+| Controller | Lifted the cube | Median time to lift |
+| --- | --- | --- |
+| Scripted grasp (built on the baseline) | **100%** (also 100% of 300 other placements) | 4.5 s |
+
+Success: the cube at least 5 cm up, held for 1 s, within 10 s. Details in
+[`specs/001-arm-reach/validation.md`](specs/001-arm-reach/validation.md) and
+[`specs/002-grasp/validation.md`](specs/002-grasp/validation.md).
 
 **Caveats.** The comparison is between _reactive_ controllers; a classical controller that plans a
 smooth trajectory (e.g. minimum-jerk) would also be smooth. The training recipe is not robust: of
@@ -60,7 +74,7 @@ flowchart LR
     ppo --> export["export.py"]
   end
   subgraph shared["shared/ (single source of truth)"]
-    xml["so100_reach.xml<br/>+ meshes"]
+    xml["so100.xml<br/>+ meshes"]
     parity["parity.json<br/>timestep, obs/action layout,<br/>normalization, gains, hashes"]
     policy["policy/reach.bin"]
     fixtures["parity/*.json fixtures"]
@@ -89,7 +103,8 @@ flowchart LR
 
 ## Plug in your own controller
 
-Controllers read the simulation state and write joint-target changes. Create a file:
+Controllers read the simulation state and write joint-target changes (the context also offers
+`gripper` and `cube` for controllers that grasp; see `grasp.ts`). Create a file:
 
 ```ts
 // web/src/control/myController.ts
@@ -178,20 +193,21 @@ shared/     robot model, parity.json, workspace grid, policy, parity fixtures
 training/   Gymnasium env, PPO training, export, fixtures, evaluation (Python)
 web/        the demo: sim worker, controllers (registry), rendering, UI, eval scripts (TypeScript)
 tests/      cross-side parity tests
-specs/      how it was built: constitution, spec, plan, tasks, validation log
+specs/      how it was built: constitution, specs (001 reach, 002 grasp), plans, tasks, validation logs
 ```
 
 The project was built spec-first ([Spec Kit](https://github.com/github/spec-kit)): the
 [constitution](.specify/memory/constitution.md) sets the rules (browser-only, sim parity is
 tested, every milestone ships, learned vs. engineered is always visible, minimal), and
-[`specs/001-arm-reach/`](specs/001-arm-reach/) has the spec, plan, tasks and a validation log
-that records measurements, failures and decisions.
+[`specs/001-arm-reach/`](specs/001-arm-reach/) and [`specs/002-grasp/`](specs/002-grasp/) have the
+spec, plan, tasks and a validation log that records measurements, failures and decisions.
 
 ## Where this could go
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for status, open items and the plan toward manipulation.
 
-- Recover from shoves: push the arm and watch each controller recover (next feature).
+- Learned grasping from demonstrations recorded in the browser (003).
+- Recover from shoves: push the arm and watch each controller recover.
 - Sensor noise, latency and dropout as live knobs, to see controllers degrade.
 - More MuJoCo sensors (force/torque, touch) and more robots from Menagerie.
 - A local bridge so a Python notebook can drive the browser simulation.
