@@ -4,13 +4,15 @@ Where the project stands and what comes next. The record of how feature 001 was 
 plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/001-arm-reach/),
 especially [`validation.md`](../specs/001-arm-reach/validation.md).
 
-## Status (2026-09-26)
+## Status (2026-10-04)
 
 - **001-arm-reach: shipped.** Live at https://rotvie.github.io/sim2browser/. P1 (pose the arm),
   P2 (DLS IK baseline reaches a draggable target) and P3 (PPO policy vs. baseline, policy view,
   honest metrics) are deployed; CI gates deploy on unit, training, parity, eval and e2e.
 - **Controller registry**: `web/src/control/registry.ts` is the plug-in point; the example lab
   controller is shown with `?lab`.
+- **Policy v2 deployed (2026-10-04)**: the policy controls 4 joints (Wrist_Roll held), parity.json
+  version 2; shipped seed final-s1 of 3 (94.0% / jerk 0.715 on 300 targets).
 
 ## Open items from 001
 
