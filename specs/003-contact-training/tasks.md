@@ -62,7 +62,7 @@ reporting. Measurements go to `specs/003-contact-training/validation.md`.
 - [X] T014 [US1] `training/scripts/train_final.sh`: stage a `--ramp gated`; header records "recipe 003"; stages b/c unchanged
 - [X] T015 [US1] Run `uv run pytest` and `uv run ruff check reach tests` in `training/`; all pass
 - [X] T016 [US1] Pilot: 3 seeds × 10 M steps (`--ramp gated --name c3-pilot-s<seed>`), in the background; record dist, `jerk_sq_raw`, `floor_rate`, `penalty_scale` at 10 M per seed in `validation.md`; go/no-go per research R5. On no-go: adjust only `config.py` weights, document why, re-pilot
-- [ ] T017 [US1] Full recipe: `scripts/train_final.sh <seed> c3` for seeds 0, 1, 2 in the background; when done, `uv run python -m reach.evaluate --run c3-s<seed> --n 300 --seed 999` per seed; record every seed (success, jerk ratio, floor and cube rates) in `validation.md` (SC-004)
+- [X] T017 [US1] Full recipe: `scripts/train_final.sh <seed> c3` for seeds 0, 1, 2 in the background; when done, `uv run python -m reach.evaluate --run c3-s<seed> --n 300 --seed 999` per seed; record every seed (success, jerk ratio, floor and cube rates) in `validation.md` (SC-004)
 
 **Checkpoint**: a recipe that learns with contacts, reusable by 004.
 
@@ -74,11 +74,11 @@ reporting. Measurements go to `specs/003-contact-training/validation.md`.
 
 **Independent Test**: quickstart §4.
 
-- [ ] T018 [US2] Select per research R6 (best proxy success among seeds with proxy jerk ratio ≤ 0.70); if none qualifies, the best proxy success overall only if its release numbers beat `final-s1` (FR-010); record the decision in `validation.md`
-- [ ] T019 [US2] `uv run python -m reach.export --run <selected>` and `uv run python -m reach.make_fixtures --run <selected>`; then `npm run test:parity` (root): all pass; only `policy-recorded.json` and the policy hashes/normalization may change among the shared artifacts (check with `git diff --stat shared/`)
-- [ ] T020 [US2] Release evaluation in `web/`: `npm run eval -- --controller baseline --n 300 --seed 0`, `--controller learned --n 300 --seed 0`, `npm run eval:compare`; record SC-001, SC-002, SC-003 with a per-height breakdown (targets < 8 cm vs ≥ 8 cm) in `validation.md`
-- [ ] T021 [US2] `npm run eval:grasp` in `web/` (parity.json's hash changed), confirm the grasp numbers are identical apart from `parityJsonSha256`, commit `shared/grasp-eval.json`; `npm test`, `npm run lint`, full e2e `npx playwright test --grep "@p1|@p2|@p3|@g1|@g2|@g3"` (SC-005)
-- [ ] T022 [US2] Watch the learned policy on the page with the cube in 5 places (front, sides, near the base, under a low target); note any visible floor or cube contact in `validation.md`
+- [X] T018 [US2] Select per research R6 (best proxy success among seeds with proxy jerk ratio ≤ 0.70); if none qualifies, the best proxy success overall only if its release numbers beat `final-s1` (FR-010); record the decision in `validation.md`
+- [X] T019 [US2] (Not applicable: no new policy ships, T018.) `uv run python -m reach.export --run <selected>` and `uv run python -m reach.make_fixtures --run <selected>`; then `npm run test:parity` (root): all pass; only `policy-recorded.json` and the policy hashes/normalization may change among the shared artifacts (check with `git diff --stat shared/`)
+- [X] T020 [US2] (Done for `final-s1` in T006: the shipped policy is unchanged.) Release evaluation in `web/`: `npm run eval -- --controller baseline --n 300 --seed 0`, `--controller learned --n 300 --seed 0`, `npm run eval:compare`; record SC-001, SC-002, SC-003 with a per-height breakdown (targets < 8 cm vs ≥ 8 cm) in `validation.md`
+- [X] T021 [US2] `npm run eval:grasp` in `web/` (parity.json's hash changed), confirm the grasp numbers are identical apart from `parityJsonSha256`, commit `shared/grasp-eval.json`; `npm test`, `npm run lint`, full e2e `npx playwright test --grep "@p1|@p2|@p3|@g1|@g2|@g3"` (SC-005)
+- [X] T022 [US2] (Not applicable: policy unchanged.) Watch the learned policy on the page with the cube in 5 places (front, sides, near the base, under a low target); note any visible floor or cube contact in `validation.md`
 
 **Checkpoint**: P2 ready to deploy.
 
@@ -86,15 +86,15 @@ reporting. Measurements go to `specs/003-contact-training/validation.md`.
 
 ## Phase 5: User Story 3 - Honest reporting (P3)
 
-- [ ] T023 [US3] `npm run eval:compare -- --write-metrics` in `web/`: header `metrics` gain the floor and cube rates; update `web/src/ui/infoPanel.ts` learned section to show "Touched the floor" and "Moved the cube" rates with their targets (≤ 1%, ≤ 2%) in ok/miss style; extend `web/tests/e2e/p3.spec.ts` to check those rows (SC-006)
-- [ ] T024 [US3] `validation.md`: before/after table on the same 300 targets (`final-s1` vs selected), every seed's result, the selection; README results paragraph and `docs/ROADMAP.md` open items updated with the measured numbers
+- [X] T023 [US3] `npm run eval:compare -- --write-metrics` in `web/`: header `metrics` gain the floor and cube rates; update `web/src/ui/infoPanel.ts` learned section to show "Touched the floor" and "Moved the cube" rates with their targets (≤ 1%, ≤ 2%) in ok/miss style; extend `web/tests/e2e/p3.spec.ts` to check those rows (SC-006)
+- [X] T024 [US3] `validation.md`: before/after table on the same 300 targets (`final-s1` vs selected), every seed's result, the selection; README results paragraph and `docs/ROADMAP.md` open items updated with the measured numbers
 
 ---
 
 ## Phase 6: Polish
 
-- [ ] T025 [P] 10-minute soak (`npx playwright test --grep "@soak" --project desktop-chromium` in `web/`) with the new policy; record in `validation.md`
-- [ ] T026 [P] Minimality pass (Principle V): remove `--ramp <fraction>` only if nothing documents reproducing 001 with it (README references the 001 recipe: keep and say so); lint clean on both sides
+- [X] T025 [P] (Not applicable: the shipped policy is unchanged; the page changes only by two info-panel rows, covered by e2e.) 10-minute soak (`npx playwright test --grep "@soak" --project desktop-chromium` in `web/`) with the new policy; record in `validation.md`
+- [X] T026 [P] (`--ramp <fraction>` stays: stages b/c use `--ramp 0`, and it reproduces 001.) Minimality pass (Principle V): remove `--ramp <fraction>` only if nothing documents reproducing 001 with it (README references the 001 recipe: keep and say so); lint clean on both sides
 - [ ] T027 Commit on `003-contact-training`, push, CI green, fast-forward `main` after 002 is deployed (deploys)
 
 ---

@@ -44,9 +44,11 @@ neutral pose to random reachable targets. Success = tip within 1 cm, nearly stil
 
 Those are the 001 measurements (no floor, no cube). With the floor and the cube of 002, measured
 on the same code path with targets at least 4 cm above the floor (300 targets): baseline 100%,
-learned **94.7%**, tip jerk ratio **0.93**. The learned policy was trained without a floor, and
-some of its paths now brush it; each impact is a jerk spike. Retraining it with contacts is an
-open item (`specs/002-grasp/validation.md`).
+learned **94.7%**, tip jerk ratio **0.93**, touching the floor in 0.7% of episodes. The learned
+policy was trained without a floor, and those few brushes are jerk spikes. Retraining with
+contacts (003) made training work on every seed and removed floor contact, but no run kept both
+the precision and the smoothness, so the 001 policy stays: see
+[`specs/003-contact-training/validation.md`](specs/003-contact-training/validation.md).
 
 **Grasping** (scripted, no learning; 100 random cube placements and turns in the reachable area):
 

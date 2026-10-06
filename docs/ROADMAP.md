@@ -14,16 +14,20 @@ plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/00
 - **Policy v2 deployed (2026-10-04)**: the policy controls 4 joints (Wrist_Roll held), parity.json
   version 2; shipped seed final-s1 of 3 (94.0% / jerk 0.715 on 300 targets).
 
-- **002-grasp: implemented, not deployed yet (2026-10-05).** Gripper and cube with contacts
+- **003-contact-training: closed 2026-10-06 without a new policy** (infrastructure shipped: contact-
+  robust training setup, floor/cube counters in the evaluation and the info panel).
+- **002-grasp: deployed 2026-10-05.** Gripper and cube with contacts
   (`so100.xml`, parity.json v3), grasping by hand, a scripted grasp (100% of 100 placements,
   median 4.5 s to lift), measured numbers in the info panel, contact parity fixtures (≤ 5e-9).
 
 ## Open items from 002
 
-- [ ] Retrain the reach policy with contacts. On the v3 model the 001 policy measures 94.7% and a
-      jerk ratio of 0.93 (300 targets ≥ 4 cm), because some paths brush the floor. Rerunning the
-      recipe unchanged failed (12.8% of episodes start inside the floor; impact jerk swamps the
-      reward): it needs collision-free start poses and an impact-robust smoothness term.
+- [ ] A reach reward that keeps 001's smoothness with contacts (003 closed without a new policy).
+      003 made training work with the floor and the cube (collision-free resets, impact-capped jerk,
+      floor/cube penalties, a gated ramp: every seed learns) but no run kept both precision and
+      smoothness: capping all jerk removed the smoothness incentive, the full jerk penalty lost
+      precision, fine-tuning the 001 policy traded ~7 points of success for smoothness. Next
+      candidates: a jerk term relative to the policy's own contact-free jerk; observing the floor.
 - [ ] SC-001 sits on the 3 s edge on mobile-chromium (≈ 3.00 s for both 001 and 002 on the
       development machine).
 - [ ] Visitor test for grasping by hand (T059) and real-phone checks (T060).
@@ -46,7 +50,7 @@ plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/00
       non-converging runs (reported, not hidden), longer stage a.
 - [ ] Chore: bump GitHub Actions versions (Node 20 deprecation warnings).
 
-## Toward manipulation (002 done as step 1)
+## Toward manipulation (002 done as step 1; learned grasping is now 004)
 
 Direction agreed: **learn in Python, run and evaluate in the browser**, with the same parity and
 honest-evaluation discipline. The SO-100 is the arm the LeRobot community uses for manipulation.
@@ -59,7 +63,7 @@ honest-evaluation discipline. The SO-100 is the arm the LeRobot community uses f
    - Gripper control in the UI; contact physics parity tests (Python vs. WASM with contacts).
    - Constitution check: Principle V (one robot, one page, one policy per task) still holds;
      a new task is a new feature.
-2. **003: learned grasping from demonstrations.**
+2. **004: learned grasping from demonstrations.**
    - Record demonstrations in the browser (dragging the target with the IK baseline is already
      a teleoperation interface), export them, train an imitation policy in Python, deploy it
      back and compare it with the scripted controller.

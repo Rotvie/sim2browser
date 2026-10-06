@@ -149,8 +149,11 @@ def test_reward_caps_jerk_and_penalizes_contacts(env):
     hit = False
     for _ in range(80):
         _, _, _, _, info = env.step(np.array([0.0, 1.0, -1.0, 1.0], dtype=np.float32))
-        assert info["jerk_sq"] <= w.jerk_cap + 1e-9
-        assert info["jerk_sq_raw"] >= info["jerk_sq"]
+        contact = info["floor"] or info["cube_contact"]
+        if contact:  # impacts are capped...
+            assert info["jerk_sq"] == min(info["jerk_sq_raw"], w.jerk_cap)
+        else:  # ...free motion pays the full jerk (a cap there stops smoothness learning: 003)
+            assert info["jerk_sq"] == info["jerk_sq_raw"]
         hit |= info["floor"]
     assert hit, "the test motion should reach the floor"
 

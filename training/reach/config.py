@@ -21,8 +21,9 @@ class RewardWeights:
     posture: float = 0.0
     # −w · ‖a‖²: small cost for commanding motion that does not help. Round 4 on.
     effort: float = 0.0
-    # 003 (contacts): the jerk term uses min(‖jerk‖², jerk_cap), ≈ p99 of contact-free motion, so an
-    # impact costs at most w_jerk · jerk_cap per step instead of swamping the reward.
+    # 003 (contacts): on steps with an arm contact the jerk term uses min(‖jerk‖², jerk_cap), so an
+    # impact costs at most w_jerk · jerk_cap per step instead of swamping the reward. Free motion
+    # pays the full ‖jerk‖².
     jerk_cap: float = 5000.0
     # −w per control step in which an arm body touches the floor / the cube (not ramped).
     floor: float = 1.0

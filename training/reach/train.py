@@ -159,6 +159,9 @@ def main() -> None:
         venv = VecNormalize.load(str(src / "vecnormalize.pkl"), VecMonitor(venv))
         venv.training = True
         model = PPO.load(src / "model.zip", env=venv, device="cpu")
+        # PPO.load restores the saved run's seed; without this, every resumed stage replays the
+        # same randomness whatever --seed says (found in 003: three "seeds" gave one run).
+        model.set_random_seed(args.seed)
     else:
         venv = VecNormalize(VecMonitor(venv), norm_obs=True, norm_reward=True, clip_obs=10.0)
         model = PPO(

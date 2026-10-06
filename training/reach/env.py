@@ -360,7 +360,9 @@ class ReachEnv(gym.Env):
         settled = dist <= self.success["tolerance"] and speed < self.success["maxTipSpeed"]
         w = self.reward_w
         jerk_raw = float(np.sum(jerk**2))
-        jerk_sq = min(jerk_raw, w.jerk_cap)
+        # Cap only impacts (steps with an arm contact): capping free motion too removed the
+        # incentive to be smooth once ordinary motion exceeded the cap (003 validation, T017).
+        jerk_sq = min(jerk_raw, w.jerk_cap) if (floor or cube) else jerk_raw
         rate = float(np.sum((action - self.prev_action) ** 2))
         posture = float(np.sum((self.q() - self.neutral)[self.act] ** 2))
         reward = (
