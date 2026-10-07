@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "mujocoVersion": "3.14.0",
   "model": {
     "path": "robot/so100.xml",

@@ -191,9 +191,18 @@ export interface GraspEpisode {
   failure: GraspFailure | null;
 }
 
-/** From the reset state with the cube placed (and settled 0.2 s), run one scripted grasp. */
-export function runGraspEpisode(session: Session, placement: GraspPlacement): GraspEpisode {
+/**
+ * From the reset state with the cube placed (and settled 0.2 s), run one attempt of a grasp
+ * controller (default: the scripted grasp). The outcome is the session's attempt monitor's.
+ */
+export function runGraspEpisode(
+  session: Session,
+  placement: GraspPlacement,
+  controllerId = "grasp",
+): GraspEpisode {
   const { sim, parity } = session;
+  const def = session.controllers.find((d) => d.id === controllerId);
+  if (def?.task !== "grasp") throw new Error(`"${controllerId}" is not a grasp controller`);
   session.setMode(MANUAL); // holds the pose while the cube settles
   session.reset();
   sim.setCubePose(
@@ -201,13 +210,13 @@ export function runGraspEpisode(session: Session, placement: GraspPlacement): Gr
     yawQuat(placement.yaw),
   );
   for (let k = 0; k < 0.2 * parity.controlHz; k++) session.controlStep();
-  if (!session.setMode("grasp")) throw new Error("the grasp controller is not available");
+  if (!session.setMode(controllerId)) throw new Error(`"${controllerId}" is not available`);
   const steps = (parity.grasp.success.timeLimit + 1) * parity.controlHz;
   for (let k = 0; k < steps; k++) {
     session.controlStep();
     const g = session.snapshot().grasp!;
-    if (g.phase === "done") return { success: true, timeToLift: g.liftTime, failure: null };
-    if (g.phase === "failed") return { success: false, timeToLift: null, failure: g.failure };
+    if (g.outcome === "done") return { success: true, timeToLift: g.liftTime, failure: null };
+    if (g.outcome !== "running") return { success: false, timeToLift: null, failure: g.failure };
   }
   return { success: false, timeToLift: null, failure: "timeout" };
 }

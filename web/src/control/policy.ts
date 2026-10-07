@@ -15,19 +15,26 @@ export interface PolicyHeader {
   sha256: string;
   trainedWith: {
     algo: string;
-    steps: number;
+    steps?: number;
+    epochs?: number;
     seed: number;
     run?: string;
     reward?: Record<string, number>;
+    /** Grasp policy (004): demonstrations it learned from. */
+    demos?: { scripted: number; hand: number; handShare: number; noise: number[] };
   };
   metrics?: {
     successRate: number;
+    /** Reach policy only. */
     jerkRatioVsBaseline: number;
     n?: number;
     seed?: number;
     /** 003: fractions of evaluation episodes touching the floor / moving the cube. */
     floorContactRate?: number;
     cubeMovedRate?: number;
+    /** Grasp policy (004). */
+    medianTimeToLift?: number | null;
+    selectionSuccessRate?: number;
   };
 }
 
@@ -87,13 +94,18 @@ export function createPolicy(header: PolicyHeader, bin: Uint8Array): Policy {
   };
 }
 
-/** Fetch and verify shared/policy/reach.{json,bin}. Throws ParityError on any mismatch. */
-export async function loadPolicy(read: ReadBytes, parity: Parity): Promise<Policy> {
-  if (!parity.policy) throw new ParityError("invalid", "parity.json has no policy");
-  const [headerBytes, bin] = await Promise.all([
-    read(parity.policy.header),
-    read(parity.policy.path),
-  ]);
+/**
+ * Fetch and verify a policy: parity.json `policy` (shared/policy/reach.*, the default) or
+ * `graspPolicy` (shared/policy/grasp.*). Throws ParityError on any mismatch.
+ */
+export async function loadPolicy(
+  read: ReadBytes,
+  parity: Parity,
+  section: "policy" | "graspPolicy" = "policy",
+): Promise<Policy> {
+  const entry = parity[section];
+  if (!entry) throw new ParityError("invalid", `parity.json has no ${section}`);
+  const [headerBytes, bin] = await Promise.all([read(entry.header), read(entry.path)]);
   const header = JSON.parse(new TextDecoder().decode(headerBytes)) as PolicyHeader;
   if (header.parityVersion !== parity.version) {
     throw new ParityError(
@@ -101,8 +113,14 @@ export async function loadPolicy(read: ReadBytes, parity: Parity): Promise<Polic
       `policy was exported for parity.json v${header.parityVersion}`,
     );
   }
-  if ((await sha256Hex(bin)) !== parity.policy.sha256) {
-    throw new ParityError("hash-mismatch", "policy weights do not match parity.json");
+  if ((await sha256Hex(bin)) !== entry.sha256) {
+    throw new ParityError("hash-mismatch", `${section} weights do not match parity.json`);
   }
-  return createPolicy(header, bin);
+  const policy = createPolicy(header, bin);
+  const io = section === "graspPolicy" ? parity.graspPolicy! : parity;
+  const [first, last] = [header.layers[0], header.layers[header.layers.length - 1]];
+  if (first.in !== io.observation.size || last.out !== io.action.size) {
+    throw new ParityError("invalid", `${section} layers do not match parity.json sizes`);
+  }
+  return policy;
 }

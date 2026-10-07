@@ -20,12 +20,12 @@ test.describe("002 P2: scripted grasp @g2", () => {
     await page.waitForTimeout(300);
   });
 
-  test("the mode switch offers Grasp; it lifts the cube and says so", async ({ page }) => {
+  test("the mode switch offers Scripted grasp; it lifts the cube and says so", async ({ page }) => {
     test.setTimeout(60_000);
     const errors = collectConsoleErrors(page);
     const modes = page.getByRole("group", { name: "Controller" }).getByRole("button");
-    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Grasp"]);
-    await page.getByRole("button", { name: "Grasp", exact: true }).click();
+    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Scripted grasp"]);
+    await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     const chip = page.getByRole("status");
     await expect(chip).toContainText(/Approaching|Descending/, { timeout: 5000 });
     await expect(chip).toContainText("Lifted ✓", { timeout: 20_000 });
@@ -37,14 +37,14 @@ test.describe("002 P2: scripted grasp @g2", () => {
   test("grasps a cube moved elsewhere; refuses one out of reach", async ({ page }) => {
     test.setTimeout(60_000);
     await dragCube(page, 0.07, -0.2);
-    await page.getByRole("button", { name: "Grasp", exact: true }).click();
+    await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     const chip = page.getByRole("status");
     await expect(chip).toContainText("Lifted ✓", { timeout: 20_000 });
 
     await page.getByRole("button", { name: "Reset" }).click(); // cube back; a new attempt starts
     await page.getByRole("button", { name: "Baseline" }).click();
     await dragCube(page, 0.0, -0.36); // beyond the graspable region
-    await page.getByRole("button", { name: "Grasp", exact: true }).click();
+    await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     await expect(chip).toContainText("Failed: cube out of reach", { timeout: 5000 });
   });
 
@@ -53,7 +53,7 @@ test.describe("002 P2: scripted grasp @g2", () => {
   test("dragging the target mid-grasp hands over to the baseline, gripper unchanged", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "Grasp", exact: true }).click();
+    await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     await expect.poll(async () => (await state(page)).phase, { timeout: 5000 }).toBe("approach");
     // Record, frame by frame, the gripper in the last grasp snapshot and the first baseline one.
     await page.evaluate(() => {

@@ -3,6 +3,7 @@
 import type { FromWorker, ToWorker } from "./protocol";
 import { createSim, getMujoco } from "./sim/mujoco";
 import { loadShared, ParityError, type ReadBytes } from "./sim/parity";
+import { createRecordingMode, type RecordingMode } from "./sim/recordingMode";
 import { servedPath } from "./sim/served";
 import { createSession, type ModeChange, type Session } from "./sim/session";
 
@@ -11,6 +12,17 @@ declare const self: DedicatedWorkerGlobalScope;
 let session: Session | null = null;
 let timer: ReturnType<typeof setInterval> | undefined;
 let read: ReadBytes | null = null;
+let recording: RecordingMode | null = null;
+
+function postRecordStatus() {
+  if (recording) post({ type: "record-status", ...recording.status() });
+}
+
+/** gzip in the worker (CompressionStream), for the downloaded demonstration file. */
+async function gzipLines(lines: string[]): Promise<ArrayBuffer> {
+  const stream = new Blob(lines).stream().pipeThrough(new CompressionStream("gzip"));
+  return new Response(stream).arrayBuffer();
+}
 
 const post = (msg: FromWorker, transfer: Transferable[] = []) => self.postMessage(msg, transfer);
 
@@ -39,7 +51,7 @@ async function selectController(s: Session, id: string) {
   }
 }
 
-async function init(baseUrl: string) {
+async function init(baseUrl: string, record: boolean) {
   read = async (path: string) => {
     const res = await fetch(new URL(`shared/${servedPath(path)}`, baseUrl));
     if (!res.ok) throw Object.assign(new Error(`${path}: HTTP ${res.status}`), { assetLoad: true });
@@ -58,6 +70,7 @@ async function init(baseUrl: string) {
     const sim = createSim(mj, parity, modelFiles);
     session?.sim.dispose();
     session = createSession(sim, parity, workspace, { read: read! });
+    recording = record ? createRecordingMode(session, parity, postRecordStatus) : null;
     post({
       type: "ready",
       joints: parity.joints,
@@ -73,6 +86,7 @@ async function init(baseUrl: string) {
       policyJoints: parity.action.joints,
       observation: parity.observation.fields,
       gripper: parity.gripper,
+      graspObservation: parity.graspPolicy?.observation.fields ?? null,
       cube: { size: parity.cube.size, body: parity.cube.body },
       graspRegion: parity.grasp.region,
       controllers: session.controllers.map(({ id, label, description, public: pub }) => ({
@@ -83,9 +97,14 @@ async function init(baseUrl: string) {
       })),
     });
     postSnapshot(session);
+    postRecordStatus();
     clearInterval(timer);
+    let ticks = 0;
     timer = setInterval(() => {
       if (session && session.tick(performance.now()) > 0) postSnapshot(session);
+      // The recording card's clock: twice a second while recording.
+      if (recording?.status().recording && ++ticks % (parity.controlHz / 2) === 0)
+        postRecordStatus();
     }, 1000 / parity.controlHz);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -99,7 +118,7 @@ async function init(baseUrl: string) {
 self.onmessage = (e: MessageEvent<ToWorker>) => {
   const msg = e.data;
   if (msg.type === "init") {
-    void init(msg.baseUrl);
+    void init(msg.baseUrl, msg.record ?? false);
     return;
   }
   if (!session) return;
@@ -119,16 +138,36 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     case "regrasp":
       session.regrasp();
       break;
+    case "retry":
+      recording?.interrupt(); // the cube is teleported
+      session.retry();
+      postSnapshot(session);
+      break;
     case "setCube":
+      recording?.interrupt(); // a teleported cube cannot be replayed
       session.setCube(msg.pos);
       postSnapshot(session);
       break;
     case "reset":
+      recording?.interrupt();
       session.reset();
       postSnapshot(session);
       break;
     case "visibility":
       session.setHidden(msg.hidden, performance.now());
+      break;
+    case "record":
+      if (!recording) break;
+      if (msg.action === "save") {
+        void recording.fileLines().then(async (lines) => {
+          if (!lines) return;
+          const bytes = await gzipLines(lines);
+          post({ type: "record-file", bytes }, [bytes]);
+        });
+      } else {
+        recording[msg.action]();
+        postSnapshot(session);
+      }
       break;
   }
 };

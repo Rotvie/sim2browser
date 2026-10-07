@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "parityVersion": 3,
+  "parityVersion": 4,
   "activation": "tanh",
   "outputActivation": "clip",
   "layers": [

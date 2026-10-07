@@ -7,10 +7,18 @@
  */
 import type { PolicyStep } from "./learned";
 
-export type GraspPhase = "approach" | "descend" | "close" | "lift" | "hold" | "done" | "failed";
-export type GraspFailure = "not-graspable" | "missed" | "slipped" | "knocked" | "timeout";
+export type GraspPhase =
+  "approach" | "descend" | "close" | "lift" | "hold" | "running" | "done" | "failed";
+export type GraspFailure =
+  "not-graspable" | "missed" | "slipped" | "knocked" | "timeout" | "cancelled";
+export type GraspOutcome = "running" | "done" | "failed" | "cancelled";
 export interface GraspState {
+  /** The grasp controller in charge. */
+  controller: string;
+  /** Its own phase if it reports one (the scripted grasp), else "running" / "done" / "failed". */
   phase: GraspPhase;
+  /** Decided by the session's attempt monitor (sim/graspAttempt.ts), never by the controller. */
+  outcome: GraspOutcome;
   failure: GraspFailure | null;
   /** Seconds from the attempt's start to the start of the successful hold. */
   liftTime: number | null;
@@ -30,7 +38,10 @@ export interface Controller {
    * says whether it is the controller in charge right now.
    */
   inspect?(active: boolean): PolicyStep | null;
-  /** Optional: the scripted grasp's progress (shown while it is in charge). */
+  /**
+   * Optional, grasp controllers: their own phase and an early failure, for display. The session's
+   * attempt monitor decides the outcome.
+   */
   graspState?(): GraspState;
 }
 

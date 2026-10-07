@@ -1,6 +1,9 @@
 {
-  "version": 1,
-  "parityJsonSha256": "e27255f34cf6d3edf69ee4b3f274e3e78654880037167f40b74ed890a98d7606",
+  "version": 2,
+  "controller": "grasp",
+  "task": "grasp",
+  "parityJsonSha256": "a1230066e90320a26c1b1b197b386c7f73255e001353261a702004458aca7e84",
+  "policySha256": null,
   "n": 100,
   "seed": 0,
   "successRate": 1,

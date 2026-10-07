@@ -243,6 +243,8 @@ def grasp_parity(model: mujoco.MjModel, base_xy: list[float], max_reach: float) 
 
 POLICY_BIN = "policy/reach.bin"
 POLICY_JSON = "policy/reach.json"
+GRASP_BIN = "policy/grasp.bin"
+GRASP_JSON = "policy/grasp.json"
 RUNS = SHARED.parent / "training" / "runs"
 
 
@@ -302,10 +304,75 @@ def export_policy(parity: dict, run: Path) -> dict:
     return parity
 
 
+def export_grasp_policy(parity: dict, run: Path, shared: Path = SHARED) -> dict:
+    """Write shared/policy/grasp.{bin,json} from an imitate.py run, and parity.json graspPolicy
+    (004 contracts/grasp-policy.md). Metrics come from shared/grasp-eval/learned-grasp.json when it
+    was measured on exactly these weights; never typed in."""
+    from .demos import GRASP_ACTION_SIZE, GRASP_OBS_FIELDS, GRASP_OBS_SIZE
+    from .imitate import load_run
+
+    config, layers = load_run(run)
+    if layers[0][0].shape[1] != GRASP_OBS_SIZE or layers[-1][0].shape[0] != GRASP_ACTION_SIZE:
+        raise SystemExit(f"{run.name}: layer sizes do not match the grasp observation/action")
+    blob = b"".join(np.concatenate([w.ravel(), b]).astype("<f4").tobytes() for w, b in layers)
+    (shared / "policy").mkdir(exist_ok=True)
+    (shared / GRASP_BIN).write_bytes(blob)
+    sha = sha256_file(shared / GRASP_BIN)
+    header = {
+        "format": 1,
+        "parityVersion": parity["version"],
+        "activation": "tanh",
+        "outputActivation": "clip",
+        "layers": [{"in": int(w.shape[1]), "out": int(w.shape[0])} for w, _ in layers],
+        "dtype": "float32-le",
+        "sha256": sha,
+        "trainedWith": {
+            "algo": config["algo"],
+            "steps": config["steps"],
+            "seed": config["seed"],
+            "run": run.name,
+            "demos": {**config["demos"], "handShare": config["handShare"]},
+        },
+    }
+    report = shared / "grasp-eval" / "learned-grasp.json"
+    if report.exists():
+        r = json.loads(report.read_text())
+        if r.get("policySha256") == sha:
+            header["metrics"] = {
+                "successRate": r["successRate"],
+                "medianTimeToLift": r["medianTimeToLift"],
+                "failures": r["failures"],
+                "n": r["n"],
+                "seed": r["seed"],
+            }
+            if "selection" in config:
+                header["metrics"]["selectionSuccessRate"] = config["selection"]["successRate"]
+    (shared / GRASP_JSON).write_text(json.dumps(header, indent=2) + "\n")
+    parity["graspPolicy"] = {
+        "path": GRASP_BIN,
+        "header": GRASP_JSON,
+        "sha256": sha,
+        "observation": {
+            "size": GRASP_OBS_SIZE,
+            "fields": GRASP_OBS_FIELDS,
+            "normalization": config["normalization"],
+        },
+        "action": {
+            "size": GRASP_ACTION_SIZE,
+            "joints": JOINTS,
+            "deltaScale": parity["baseline"]["maxJointSpeed"] / parity["controlHz"],
+            "gripperIndex": len(JOINTS),
+            "gripperThreshold": 0.0,
+        },
+    }
+    return parity
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-policy", action="store_true", help="write parity.json without a policy")
     ap.add_argument("--run", type=str, help="training run id under training/runs/")
+    ap.add_argument("--grasp-run", type=str, help="imitate.py run id for the grasp policy (004)")
     args = ap.parse_args()
     if not args.no_policy and not args.run:
         raise SystemExit("pass --run <id> (or --no-policy)")
@@ -313,12 +380,15 @@ def main() -> None:
     parity = base_parity(model)
     if not args.no_policy:
         parity = export_policy(parity, RUNS / args.run)
+    if args.grasp_run:
+        parity = export_grasp_policy(parity, RUNS / args.grasp_run)
     write_parity(parity)
     print(
         f"wrote shared/parity.json: maxReach={parity['reach']['maxReach']:.3f} m, "
         f"workspace dims={parity['reach']['workspace']['dims']}, "
         f"grasp region={parity['grasp']['region']}"
         + (f", policy from {args.run}" if args.run else "")
+        + (f", grasp policy from {args.grasp_run}" if args.grasp_run else "")
     )
 
 

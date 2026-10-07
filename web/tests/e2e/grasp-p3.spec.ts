@@ -4,7 +4,7 @@ import { waitReady } from "./helpers";
 import { expect, test } from "./fixtures";
 
 const committed = JSON.parse(
-  readFileSync(new URL("../../../shared/grasp-eval.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../../../shared/grasp-eval/grasp.json", import.meta.url), "utf8"),
 ) as { n: number; successRate: number; medianTimeToLift: number | null };
 
 test.describe("002 P3: honest grasp metrics @g3", () => {

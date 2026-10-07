@@ -4,11 +4,18 @@
  */
 import { createManualController } from "../control/manual";
 import { MANUAL, ModeMachine, type ControlMode, type ModeChangeReason } from "../control/modes";
-import { CONTROLLERS, type ControllerContext, type ControllerDef } from "../control/registry";
+import type { Controller } from "../control/modes";
+import {
+  CONTROLLERS,
+  taskOf,
+  type ControllerContext,
+  type ControllerDef,
+} from "../control/registry";
 import type { Snapshot } from "../protocol";
 import { createArm, type Arm } from "./arm";
 import { createClock, type Clock } from "./clock";
 import { clampCubePlacement, cubeYaw, isGraspable, yawQuat } from "./cube";
+import { monitorGrasp, type MonitoredGrasp } from "./graspAttempt";
 import { createGripper, type Gripper } from "./gripper";
 import type { Sim } from "./mujoco";
 import type { GripperCommand, Parity, ReadBytes } from "./parity";
@@ -44,12 +51,20 @@ export interface Session {
   controllerFailed(id: ControlMode): ModeChange | null;
   dragJoint(i: number, angle: number): ModeChange | null;
   setMode(mode: ControlMode): ModeChange | null;
+  /** The active controller is a grasp controller (`task: "grasp"`). */
+  inGrasp(): boolean;
   /** Visitor's target drag; in grasp mode it hands over to the baseline first. */
   setTarget(pos: ArrayLike<number>): ModeChange | null;
   /** Visitor's gripper command; works in every mode (in grasp mode: baseline takes over first). */
   setGripper(command: GripperCommand): ModeChange | null;
   /** In grasp mode: start a new attempt from the current state. */
   regrasp(): void;
+  /**
+   * In grasp mode: reset the arm and gripper, put the cube back where the visitor placed it (the
+   * default after a reset, or the last cube drag), let it settle, and start the selected grasp
+   * controller: both grasps compared on one placement (004 FR-010).
+   */
+  retry(): boolean;
   /** Both jaws touch the cube. */
   cubeHeld(): boolean;
   /**
@@ -61,8 +76,10 @@ export interface Session {
   setHidden(hidden: boolean, nowMs: number): void;
   /** Advance in real time; returns the number of control steps taken. */
   tick(nowMs: number): number;
-  /** One control step: active controller, then `substeps` physics steps. */
+  /** One control step: active controller, then `substeps` physics steps, then listeners. */
   controlStep(): void;
+  /** Called after every control step (the demonstration recorder); returns an unsubscribe. */
+  onStep(fn: () => void): () => void;
   snapshot(): Snapshot;
 }
 
@@ -85,7 +102,6 @@ export function createSession(
   );
   const gripper = createGripper(sim, parity);
   const modes = new ModeMachine(manual);
-  const GRASP = "grasp";
   const clock: Clock = createClock({ controlHz: parity.controlHz });
 
   const controllers = (opts.controllers ?? CONTROLLERS).filter(
@@ -100,13 +116,23 @@ export function createSession(
     gripper,
     cube: { pose: () => sim.cubePose(), held: () => cubeHeld() },
   };
+  /** Grasp controllers run inside an attempt monitor (graspAttempt.ts). */
+  const register = (def: ControllerDef, c: Controller) =>
+    modes.register(def.id, taskOf(def) === "grasp" ? monitorGrasp(def.id, c, parity, ctx.cube) : c);
   for (const def of controllers.filter((d) => d.preload)) {
     const c = def.create(ctx);
     if (c instanceof Promise) throw new Error(`preloaded controller ${def.id} must be synchronous`);
-    modes.register(def.id, c);
+    register(def, c);
   }
   modes.setMode(DEFAULT_MODE);
   const pending = new Map<ControlMode, Promise<void>>();
+  const inGrasp = () => taskOf(controllers.find((d) => d.id === modes.mode)) === "grasp";
+  /** The visitor's cube placement (Retry returns to it): default pose, or the last cube drag. */
+  const cubeNow = () => {
+    const c = sim.cubePose();
+    return { pos: Array.from(c.pos), quat: Array.from(c.quat) };
+  };
+  let placement = cubeNow();
 
   /** Leaving the grasp: keep the arm where it is (the next controller aims at the tip). */
   const leaveGrasp = (mode: ControlMode, reason: ModeChange["reason"]): ModeChange | null => {
@@ -114,10 +140,12 @@ export function createSession(
     return { mode, reason };
   };
 
+  const listeners = new Set<() => void>();
   const controlStep = () => {
     modes.controller.step();
     gripper.step();
     sim.stepPhysics(parity.substeps);
+    for (const fn of listeners) fn();
   };
   const cubeHeld = () =>
     sim.bodiesInContact(parity.cube.body, "Fixed_Jaw") &&
@@ -132,13 +160,14 @@ export function createSession(
     gripper,
     controllers,
     cubeHeld,
+    inGrasp,
     ensureController(id) {
       if (modes.available(id)) return Promise.resolve();
       const def = controllers.find((d) => d.id === id);
       if (!def) return Promise.reject(new Error(`unknown controller "${id}"`));
       let p = pending.get(id);
       if (!p) {
-        p = Promise.resolve(def.create(ctx)).then((c) => modes.register(id, c));
+        p = Promise.resolve(def.create(ctx)).then((c) => register(def, c));
         p.finally(() => pending.delete(id)).catch(() => {});
         pending.set(id, p);
       }
@@ -155,17 +184,17 @@ export function createSession(
       return change;
     },
     setMode(mode) {
-      if (modes.mode === GRASP && mode !== GRASP) target.set(sim.sitePos(parity.tipSite));
+      if (inGrasp() && mode !== modes.mode) target.set(sim.sitePos(parity.tipSite));
       return modes.setMode(mode) ? { mode, reason: "user" } : null;
     },
     setTarget(pos) {
-      const change = modes.mode === GRASP ? leaveGrasp(DEFAULT_MODE, "target-drag") : null;
+      const change = inGrasp() ? leaveGrasp(DEFAULT_MODE, "target-drag") : null;
       target.set(pos);
       return change;
     },
     setGripper(command) {
       let change: ModeChange | null = null;
-      if (modes.mode === GRASP) {
+      if (inGrasp()) {
         target.set(sim.sitePos(parity.tipSite));
         change = leaveGrasp(DEFAULT_MODE, "user");
       }
@@ -173,7 +202,21 @@ export function createSession(
       return change;
     },
     regrasp() {
-      if (modes.mode === GRASP) modes.controller.enter();
+      if (inGrasp()) modes.controller.enter();
+    },
+    retry() {
+      if (!inGrasp()) return false;
+      const mode = modes.mode;
+      const start = placement;
+      modes.setMode(MANUAL);
+      sim.resetToPose(neutral);
+      gripper.reset();
+      target.reset();
+      manual.resetGoal(neutral);
+      sim.setCubePose(start.pos, start.quat);
+      for (let k = 0; k < 0.2 * parity.controlHz; k++) controlStep();
+      modes.setMode(mode);
+      return true;
     },
     setCube(xy) {
       if (cubeHeld()) return false;
@@ -184,10 +227,13 @@ export function createSession(
         sim.setCubePose(before.pos, before.quat);
         return false;
       }
+      if (inGrasp()) (modes.controller as MonitoredGrasp).cancel();
+      placement = cubeNow();
       return true;
     },
     reset() {
       sim.resetToPose(neutral);
+      placement = cubeNow();
       gripper.reset();
       target.reset();
       manual.resetGoal(neutral);
@@ -203,6 +249,10 @@ export function createSession(
       return n;
     },
     controlStep,
+    onStep(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
     snapshot() {
       const { pos, quat } = sim.bodyPoses();
       const cube = sim.cubePose();
@@ -238,7 +288,7 @@ export function createSession(
         gripper: gripper.command,
         cube: { ...cube, held: cubeHeld(), graspable: isGraspable(cube, parity) },
         mode: modes.mode,
-        grasp: modes.mode === GRASP ? modes.controller.graspState?.() : undefined,
+        grasp: inGrasp() ? modes.controller.graspState?.() : undefined,
         policyStep,
         policyStepActive,
       };

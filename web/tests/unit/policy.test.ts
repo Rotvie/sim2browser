@@ -42,6 +42,8 @@ describe("policy MLP", () => {
     const read = async (path: string) => files[path];
     const parity = {
       version: 2,
+      observation: { size: 2 },
+      action: { size: 1 },
       policy: {
         path: "policy/reach.bin",
         header: "policy/reach.json",
@@ -51,6 +53,8 @@ describe("policy MLP", () => {
     await expect(loadPolicy(read, parity)).resolves.toBeTruthy();
     const bad = { ...parity, policy: { ...parity.policy!, sha256: "0".repeat(64) } } as Parity;
     await expect(loadPolicy(read, bad)).rejects.toMatchObject({ code: "hash-mismatch" });
+    const wrongSize = { ...parity, observation: { size: 3 } } as unknown as Parity;
+    await expect(loadPolicy(read, wrongSize)).rejects.toMatchObject({ code: "invalid" });
   });
 });
 

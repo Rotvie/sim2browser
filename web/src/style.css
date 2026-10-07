@@ -525,3 +525,49 @@ body {
 .btn.small[hidden] {
   display: none;
 }
+
+/* 004 recording mode (?record): a small card, top left. */
+.record-card {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.record-card h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.record-card .next,
+.record-card .note {
+  color: var(--muted, #6b7280);
+  font-weight: normal;
+}
+
+.record-card .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.record-card .row[hidden] {
+  display: none;
+}
+
+.record-card p {
+  margin: 0;
+}
+
+.record-card .clock {
+  color: #c2410c;
+  font-variant-numeric: tabular-nums;
+}

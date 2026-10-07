@@ -5,7 +5,7 @@ import { createSession } from "../../src/sim/session";
 import { loadNodeSim, readShared } from "../node-shared";
 
 describe("controller registry", () => {
-  it("has unique ids, labels and descriptions; public ones are the demo's (002: + grasp)", () => {
+  it("has unique ids, labels and descriptions; public ones are the demo's (004: + learned grasp)", () => {
     const ids = CONTROLLERS.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).not.toContain("manual");
@@ -14,6 +14,7 @@ describe("controller registry", () => {
       "baseline",
       "learned",
       "grasp",
+      "learned-grasp",
     ]);
   });
 

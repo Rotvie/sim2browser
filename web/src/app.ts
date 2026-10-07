@@ -15,6 +15,7 @@ import { createInfoPanel } from "./ui/infoPanel";
 import type { Messages } from "./ui/messages";
 import { createModeSwitch, type ModeSwitch } from "./ui/modeSwitch";
 import { createObservePanel, type ObservePanel } from "./ui/panel";
+import { createRecordPanel, type RecordPanel } from "./ui/recordPanel";
 import { createResetButton } from "./ui/resetButton";
 
 export interface AppContext {
@@ -68,7 +69,15 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   let modeSwitch: ModeSwitch | null = null;
   let observe: ObservePanel | null = null;
   let gripperButton: GripperButton | null = null;
-  const graspStatus = createGraspStatus(app, () => send({ type: "regrasp" }));
+  const graspStatus = createGraspStatus(
+    app,
+    () => send({ type: "regrasp" }),
+    () => send({ type: "retry" }),
+  );
+  // 004 recording mode: only with ?record (not linked anywhere).
+  const recordPanel: RecordPanel | null = new URLSearchParams(location.search).has("record")
+    ? createRecordPanel(app, (action) => send({ type: "record", action }))
+    : null;
   /** Modes the worker has run at least once (already created: no loading spinner). */
   const used = new Set<string>();
 
@@ -152,8 +161,28 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           send({ type: "setGripper", command });
         });
         const hasPolicy = shown.some((c) => c.id === "learned");
-        if (hasPolicy)
-          observe = createObservePanel(app, toolbar, msg.observation, msg.policyJoints);
+        const hasGraspPolicy = shown.some((c) => c.id === "learned-grasp") && msg.graspObservation;
+        const layouts = [
+          ...(hasPolicy
+            ? [
+                {
+                  fields: msg.observation,
+                  outputs: msg.policyJoints.map((j) => j.replace("_", " ")),
+                  joints: msg.policyJoints,
+                },
+              ]
+            : []),
+          ...(hasGraspPolicy
+            ? [
+                {
+                  fields: msg.graspObservation!,
+                  outputs: [...msg.joints.map((j) => j.replace("_", " ")), "Gripper (> 0 closes)"],
+                  joints: msg.joints,
+                },
+              ]
+            : []),
+        ];
+        if (layouts.length) observe = createObservePanel(app, toolbar, layouts);
         createInfoPanel(
           app,
           toolbar,
@@ -162,7 +191,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           hasPolicy ? new URL("shared/policy/reach.json", document.baseURI).href : null,
           shown.filter((c) => !c.public),
           shown.some((c) => c.id === "grasp")
-            ? new URL("shared/grasp-eval.json", document.baseURI).href
+            ? new URL("shared/grasp-eval/grasp.json", document.baseURI).href
             : null,
         );
         messages.hide();
@@ -178,6 +207,12 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         break;
       case "modeChanged":
         modeSwitch?.show(msg.mode);
+        break;
+      case "record-status":
+        recordPanel?.show(msg);
+        break;
+      case "record-file":
+        recordPanel?.download(msg.bytes);
         break;
       case "controllerError": {
         modeSwitch?.setState(msg.id, "failed", msg.message);

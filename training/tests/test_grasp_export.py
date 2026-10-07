@@ -20,7 +20,7 @@ def model(parity):
 
 
 def test_sections_present(parity):
-    assert parity["version"] == 3
+    assert parity["version"] == 4
     assert set(parity["gripper"]) >= {"joint", "actuator", "open", "closed", "maxSpeed", "default"}
     assert set(parity["cube"]) >= {"body", "joint", "size", "defaultPose"}
     g = parity["grasp"]

@@ -14,7 +14,7 @@ from typing import Any
 SHARED = Path(__file__).resolve().parents[2] / "shared"
 PARITY_PATH = SHARED / "parity.json"
 MODEL_PATH = "robot/so100.xml"
-PARITY_VERSION = 3
+PARITY_VERSION = 4
 
 
 class ParityError(ValueError):
@@ -70,6 +70,27 @@ def validate(p: dict[str, Any]) -> None:
         raise ParityError("grasp.region.maxAngle must be in (0, pi/2]")
     if not in_region(p["cube"]["defaultPose"]["pos"], reg):
         raise ParityError("cube.defaultPose must be inside grasp.region")
+    gp = p.get("graspPolicy")
+    if gp is not None:
+        validate_grasp_policy(p, gp)
+
+
+def validate_grasp_policy(p: dict[str, Any], gp: dict[str, Any]) -> None:
+    """004 contracts/grasp-policy.md. Layer sizes and the weights hash are checked on export and
+    in the parity tests (they need the policy files)."""
+    obs, act = gp["observation"], gp["action"]
+    if obs["size"] != sum(f["size"] for f in obs["fields"]):
+        raise ParityError("graspPolicy.observation.size must equal the sum of field sizes")
+    norm = obs["normalization"]
+    if not len(norm["mean"]) == len(norm["std"]) == obs["size"]:
+        raise ParityError("graspPolicy normalization mean/std must have observation.size entries")
+    if not set(act["joints"]) <= set(p["joints"]):
+        raise ParityError("graspPolicy.action.joints must be a subset of joints")
+    if act["size"] != len(act["joints"]) + 1 or act["gripperIndex"] != len(act["joints"]):
+        raise ParityError("graspPolicy.action: one output per joint, then the gripper")
+    want = p["baseline"]["maxJointSpeed"] / p["controlHz"]
+    if abs(act["deltaScale"] - want) > 1e-12:
+        raise ParityError("graspPolicy.action.deltaScale must equal maxJointSpeed / controlHz")
 
 
 def in_region(pos: list[float], reg: dict[str, Any]) -> bool:

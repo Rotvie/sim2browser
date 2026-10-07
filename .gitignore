@@ -23,6 +23,7 @@ __pycache__/
 
 # Training outputs (exported artifacts live in shared/, which is tracked)
 training/runs/
+training/demos/scripted-*.demos.jsonl.gz
 training/checkpoints/
 training/logs/
 *.zip
@@ -31,3 +32,5 @@ training/logs/
 # Env
 .env
 .env.*
+training/demos/*.npz
+training/demos/dagger-*.demos.jsonl.gz

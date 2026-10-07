@@ -6,10 +6,12 @@ import {
   meanSqJerk,
   reachableTargets,
   runEpisode,
+  runGraspEpisode,
 } from "../../src/sim/eval";
 import { createSession } from "../../src/sim/session";
 import { inRegion } from "../../src/sim/parity";
-import { loadNodeSim } from "../node-shared";
+import { readFileSync } from "node:fs";
+import { loadNodeSim, readShared, SHARED_DIR } from "../node-shared";
 
 const success = { tolerance: 0.01, maxTipSpeed: 0.02, hold: 0.2, timeLimit: 2.0 };
 const hz = 50;
@@ -104,6 +106,34 @@ describe("grasp evaluation (002 research R6)", () => {
     expect(feed(3, 4.5)).toEqual({ ok: true, liftTime: expect.closeTo(3, 6) });
     expect(feed(3, 3.9).ok).toBe(false);
     expect(feed(succ.timeLimit - 0.5, succ.timeLimit + 2).ok).toBe(false);
+  });
+});
+
+describe("grasp episodes through the attempt monitor (004 research R7)", () => {
+  it("reproduce the committed scripted results for the first 10 placements of seed 0", async () => {
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace, { read: readShared });
+    await s.ensureController("grasp");
+    const report = JSON.parse(readFileSync(`${SHARED_DIR}grasp-eval/grasp.json`, "utf8"));
+    const round = (x: number | null) => (x === null ? null : Math.round(x * 1e6) / 1e6);
+    for (const p of graspPlacements(parity, 10, 0).map((p, i) => ({ p, i }))) {
+      const r = runGraspEpisode(s, p.p, "grasp");
+      const want = report.placements[p.i];
+      expect({ ...r, timeToLift: round(r.timeToLift) }).toEqual({
+        success: want.success,
+        timeToLift: want.timeToLift,
+        failure: want.failure,
+      });
+    }
+    sim.dispose();
+  });
+
+  it("refuse a reach controller", async () => {
+    const { sim, parity, workspace } = await loadNodeSim();
+    const s = createSession(sim, parity, workspace, { read: readShared });
+    const [p] = graspPlacements(parity, 1, 0);
+    expect(() => runGraspEpisode(s, p, "baseline")).toThrow("not a grasp controller");
+    sim.dispose();
   });
 });
 

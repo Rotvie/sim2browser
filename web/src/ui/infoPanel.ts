@@ -5,7 +5,7 @@
 import type { PolicyHeader } from "../control/policy";
 import type { Parity } from "../sim/parity";
 
-/** shared/grasp-eval.json (002 contracts/grasp-eval.md), the fields the panel shows. */
+/** shared/grasp-eval/grasp.json (004 contracts/grasp-eval.md), the fields the panel shows. */
 interface GraspEval {
   n: number;
   successRate: number;
@@ -117,7 +117,7 @@ export function createInfoPanel(
     }
   };
 
-  // The grasp section, likewise, from shared/grasp-eval.json: the release evaluation's numbers.
+  // The grasp section, likewise, from shared/grasp-eval/<id>.json: the release evaluation's numbers.
   const graspInfo = panel.querySelector<HTMLElement>(".grasp-info")!;
   let graspLoaded = false;
   const loadGrasp = async () => {

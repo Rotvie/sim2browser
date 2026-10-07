@@ -7,6 +7,13 @@
  *
  *   npm run eval -- --controller <id>
  *   npm run eval:compare -- --controller <id>
+ *
+ * A grasp controller is the same plus `task: "grasp"` (see naiveGrasp.ts). The session then
+ * judges its attempts (sim/graspAttempt.ts), the grasp status card shows them, and it can be
+ * evaluated and record demonstrations without further changes:
+ *
+ *   npm run eval:grasp -- --controller <id>
+ *   npm run demos -- --controller <id>
  */
 import type { Arm } from "../sim/arm";
 import type { CubePose } from "../sim/cube";
@@ -17,6 +24,9 @@ import { createBaselineController } from "./baseline";
 import { createGraspController } from "./grasp";
 import { jacobianTranspose } from "./jacobianTranspose";
 import { createLearnedController } from "./learned";
+import { createLearnedGraspController } from "./learnedGrasp";
+import { naiveGrasp } from "./naiveGrasp";
+import { reactiveGrasp } from "./reactiveGrasp";
 import type { Controller } from "./modes";
 import { loadPolicy } from "./policy";
 
@@ -37,6 +47,8 @@ export interface ControllerContext {
   cube: { pose(): CubePose; held(): boolean };
 }
 
+export type ControllerTask = "reach" | "grasp";
+
 export interface ControllerDef {
   /** Stable id: used in the URL-free mode switch, eval CLI and reports. */
   id: string;
@@ -46,6 +58,8 @@ export interface ControllerDef {
   description: string;
   /** Shown on the public page; otherwise only with `?lab` in the URL. */
   public: boolean;
+  /** "reach" (default): follows the target. "grasp": picks up the cube; judged by the session. */
+  task?: ControllerTask;
   /** Create at startup (must then be synchronous). Otherwise created on first selection. */
   preload?: boolean;
   /** Whether this build can offer it (e.g. a policy was exported). Default: yes. */
@@ -74,9 +88,30 @@ export const learned: ControllerDef = {
     createLearnedController({ sim, arm, parity, target, policy: await loadPolicy(read, parity) }),
 };
 
+export const learnedGrasp: ControllerDef = {
+  id: "learned-grasp",
+  label: "Learned grasp",
+  description:
+    "A policy learned by imitation from scripted and hand-recorded grasps (behavior cloning).",
+  task: "grasp",
+  public: true,
+  available: (parity) => !!parity.graspPolicy,
+  // Loads and hash-verifies shared/policy/grasp.* on first use.
+  create: async ({ sim, arm, parity, gripper, cube, read }) =>
+    createLearnedGraspController({
+      sim,
+      arm,
+      parity,
+      gripper,
+      cube,
+      policy: await loadPolicy(read, parity, "graspPolicy"),
+    }),
+};
+
 export const grasp: ControllerDef = {
   id: "grasp",
-  label: "Grasp",
+  label: "Scripted grasp",
+  task: "grasp",
   description:
     "Scripted top-down grasp built on the baseline: approach, descend, close, lift. No learning.",
   public: true,
@@ -84,5 +119,15 @@ export const grasp: ControllerDef = {
     createGraspController({ sim, arm, parity, gripper, cube }),
 };
 
+export const taskOf = (def: ControllerDef | undefined): ControllerTask => def?.task ?? "reach";
+
 /** Order = order in the mode switch (after Manual). */
-export const CONTROLLERS: ControllerDef[] = [baseline, learned, grasp, jacobianTranspose];
+export const CONTROLLERS: ControllerDef[] = [
+  baseline,
+  learned,
+  grasp,
+  learnedGrasp,
+  jacobianTranspose,
+  naiveGrasp,
+  reactiveGrasp,
+];

@@ -13,6 +13,8 @@
     "eval:compare": "tsx scripts/eval-compare.ts",
     "size": "tsx scripts/size.ts",
     "lint": "eslint . && prettier --check .",
+    "dagger": "tsx scripts/dagger.ts",
+    "demos": "tsx scripts/demos.ts",
     "eval:grasp": "tsx scripts/eval-grasp.ts"
   },
   "dependencies": {

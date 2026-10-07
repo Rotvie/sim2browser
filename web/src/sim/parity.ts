@@ -91,6 +91,24 @@ export interface Parity {
     success: { liftCheck: number; hold: number; timeLimit: number };
   };
   policy?: { path: string; header: string; sha256: string };
+  /** The learned grasp (004 contracts/grasp-policy.md); absent when none is shipped. */
+  graspPolicy?: {
+    path: string;
+    header: string;
+    sha256: string;
+    observation: {
+      size: number;
+      fields: { name: string; size: number; label: string; unit: string }[];
+      normalization: { mean: number[]; std: number[]; clip: number; eps: number };
+    };
+    action: {
+      size: number;
+      joints: string[];
+      deltaScale: number;
+      gripperIndex: number;
+      gripperThreshold: number;
+    };
+  };
 }
 
 export type GripperCommand = "open" | "closed";
@@ -111,7 +129,7 @@ export function inRegion(xy: ArrayLike<number>, reg: GraspRegion): boolean {
   return reg.rMin <= r && r <= reg.rMax && Math.abs(Math.atan2(dx, -dy)) <= reg.maxAngle;
 }
 
-export const PARITY_VERSION = 3;
+export const PARITY_VERSION = 4;
 
 export type ParityErrorCode = "version-mismatch" | "hash-mismatch" | "invalid";
 
@@ -173,6 +191,36 @@ export function validateParity(p: Parity, mujocoVersion: string): void {
   }
   if (!inRegion(p.cube.defaultPose.pos, reg)) {
     throw new ParityError("invalid", "cube.defaultPose must be inside grasp.region");
+  }
+  if (p.graspPolicy) validateGraspPolicy(p, p.graspPolicy);
+}
+
+/** 004 contracts/grasp-policy.md (same rules as training/reach/spec.py). */
+function validateGraspPolicy(p: Parity, gp: NonNullable<Parity["graspPolicy"]>): void {
+  const { observation: obs, action: act } = gp;
+  if (obs.fields.reduce((n, f) => n + f.size, 0) !== obs.size) {
+    throw new ParityError(
+      "invalid",
+      "graspPolicy.observation.size must equal the sum of field sizes",
+    );
+  }
+  if (obs.normalization.mean.length !== obs.size || obs.normalization.std.length !== obs.size) {
+    throw new ParityError(
+      "invalid",
+      "graspPolicy normalization must have observation.size entries",
+    );
+  }
+  if (!act.joints.every((j) => p.joints.includes(j))) {
+    throw new ParityError("invalid", "graspPolicy.action.joints must be a subset of joints");
+  }
+  if (act.size !== act.joints.length + 1 || act.gripperIndex !== act.joints.length) {
+    throw new ParityError("invalid", "graspPolicy.action: one output per joint, then the gripper");
+  }
+  if (Math.abs(act.deltaScale - p.baseline.maxJointSpeed / p.controlHz) > 1e-12) {
+    throw new ParityError(
+      "invalid",
+      "graspPolicy.action.deltaScale must equal maxJointSpeed / controlHz",
+    );
   }
 }
 

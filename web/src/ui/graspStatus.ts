@@ -10,6 +10,7 @@ const PHASE: Record<Exclude<GraspPhase, "failed">, string> = {
   close: "Closing",
   lift: "Lifting",
   hold: "Holding",
+  running: "Running",
   done: "Lifted ✓",
 };
 
@@ -19,6 +20,7 @@ const FAILURE: Record<GraspFailure, string> = {
   slipped: "cube slipped",
   knocked: "knocked the cube",
   timeout: "took too long",
+  cancelled: "cancelled (cube moved)",
 };
 
 export interface GraspStatus {
@@ -26,7 +28,11 @@ export interface GraspStatus {
   show(state: GraspState | undefined): void;
 }
 
-export function createGraspStatus(root: HTMLElement, onRegrasp: () => void): GraspStatus {
+export function createGraspStatus(
+  root: HTMLElement,
+  onRegrasp: () => void,
+  onRetry: () => void,
+): GraspStatus {
   const el = document.createElement("div");
   el.className = "grasp-status";
   el.setAttribute("role", "status");
@@ -38,21 +44,37 @@ export function createGraspStatus(root: HTMLElement, onRegrasp: () => void): Gra
   again.textContent = "Grasp again";
   again.hidden = true;
   again.addEventListener("click", onRegrasp);
-  el.append(text, again);
+  // 004: the same placement again (after switching between the scripted and learned grasp).
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "btn small";
+  retry.textContent = "Retry";
+  retry.title = "Same cube placement, arm reset";
+  retry.hidden = true;
+  retry.addEventListener("click", onRetry);
+  el.append(text, again, retry);
   root.appendChild(el);
   let last = "";
   return {
     show(state) {
-      const key = state ? `${state.phase}:${state.failure}` : "";
+      const key = state
+        ? `${state.controller}:${state.phase}:${state.outcome}:${state.failure}`
+        : "";
       if (key === last) return;
       last = key;
       el.hidden = !state;
       if (!state) return;
-      const ended = state.phase === "done" || state.phase === "failed";
+      const ended = state.outcome !== "running";
       text.textContent =
-        state.phase === "failed" ? `Failed: ${FAILURE[state.failure!]}` : PHASE[state.phase];
-      el.dataset.phase = state.phase;
+        state.outcome === "failed" || state.outcome === "cancelled"
+          ? `Failed: ${FAILURE[state.failure!]}`
+          : state.outcome === "done"
+            ? PHASE.done
+            : PHASE[state.phase as Exclude<GraspPhase, "failed">];
+      el.dataset.phase =
+        state.outcome === "done" ? "done" : state.outcome === "running" ? state.phase : "failed";
       again.hidden = !ended;
+      retry.hidden = !ended;
     },
   };
 }

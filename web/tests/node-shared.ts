@@ -6,12 +6,17 @@ import { loadShared, type ReadBytes } from "../src/sim/parity";
 
 export const SHARED_DIR = fileURLToPath(new URL("../../shared/", import.meta.url));
 
-export const readShared: ReadBytes = async (path) =>
-  new Uint8Array(await readFile(SHARED_DIR + path));
+/** A reader for a shared/-shaped directory (default: the repo's shared/). */
+export const sharedReader =
+  (dir: string = SHARED_DIR): ReadBytes =>
+  async (path) =>
+    new Uint8Array(await readFile(dir.replace(/\/?$/, "/") + path));
 
-export async function loadNodeSim() {
+export const readShared: ReadBytes = sharedReader();
+
+export async function loadNodeSim(read: ReadBytes = readShared) {
   const mj = await getMujoco();
-  const shared = await loadShared(readShared, mj.mj_versionString());
+  const shared = await loadShared(read, mj.mj_versionString());
   const sim = createSim(mj, shared.parity, shared.modelFiles);
   return { mj, sim, ...shared };
 }

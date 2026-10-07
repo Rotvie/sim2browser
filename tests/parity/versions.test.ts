@@ -13,7 +13,7 @@ describe("versions and hashes", () => {
   it("MuJoCo version, model, workspace, parity.json and policy hashes all match", async () => {
     const { mj, parity, sim } = await loadNodeSim();
     sim.dispose();
-    expect(parity.version).toBe(3);
+    expect(parity.version).toBe(4);
     expect(parity.model.path).toBe("robot/so100.xml");
     const pinned = readFileSync(`${SHARED_DIR}MUJOCO_VERSION`, "utf8").trim();
     expect(mj.mj_versionString()).toBe(pinned);

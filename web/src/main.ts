@@ -31,6 +31,7 @@ async function boot() {
     worker.postMessage({
       type: "init",
       baseUrl: new URL(import.meta.env.BASE_URL, location.href).href,
+      record: new URLSearchParams(location.search).has("record"),
     } satisfies ToWorker);
   init();
 

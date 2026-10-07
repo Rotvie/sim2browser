@@ -14,11 +14,75 @@ export interface ObservePanel {
   openElement(): HTMLElement | null;
 }
 
+export interface PolicyLayout {
+  fields: ObsField[];
+  /** Output labels, in output order. */
+  outputs: string[];
+  /** Joint names for per-joint observation fields. */
+  joints: string[];
+}
+
+const axis = ["x", "y", "z"];
+const barFields = new Set(["q", "prevAction"]);
+
+function buildView(fields: ObsField[], outputs: string[], joints: string[]) {
+  const el = document.createElement("div");
+  const cells: { value: HTMLElement; bar: HTMLElement | null }[] = [];
+  const jointLabel = (i: number) => joints[i]?.replace("_", " ") ?? `output ${i + 1}`;
+  for (const f of fields) {
+    const group = document.createElement("div");
+    group.className = "obs-group";
+    const h = document.createElement("h3");
+    h.textContent = f.unit ? `${f.label} (${f.unit})` : f.label;
+    group.appendChild(h);
+    for (let i = 0; i < f.size; i++) {
+      const row = document.createElement("div");
+      row.className = "obs-row";
+      const name = document.createElement("span");
+      name.textContent =
+        f.size === 3
+          ? axis[i]
+          : f.size === 2
+            ? ["sin", "cos"][i]
+            : f.size === 1
+              ? ""
+              : jointLabel(i);
+      const bar = barFields.has(f.name) ? document.createElement("span") : null;
+      if (bar) bar.className = "bar";
+      const value = document.createElement("span");
+      value.className = "num";
+      row.append(name, ...(bar ? [bar] : []), value);
+      group.appendChild(row);
+      cells.push({ value, bar });
+    }
+    el.appendChild(group);
+  }
+  const outGroup = document.createElement("div");
+  outGroup.className = "obs-group output";
+  outGroup.innerHTML = `<h3>Output: joint target change per step (−1…+1)</h3>`;
+  const outs: { bar: HTMLElement; value: HTMLElement }[] = [];
+  for (const label of outputs) {
+    const row = document.createElement("div");
+    row.className = "obs-row";
+    const name = document.createElement("span");
+    name.textContent = label;
+    const bar = document.createElement("span");
+    bar.className = "bar signed";
+    const value = document.createElement("span");
+    value.className = "num";
+    row.append(name, bar, value);
+    outGroup.appendChild(row);
+    outs.push({ bar, value });
+  }
+  el.appendChild(outGroup);
+  const size = fields.reduce((n, f) => n + f.size, 0);
+  return { el, cells, outs, size };
+}
+
 export function createObservePanel(
   root: HTMLElement,
   toolbar: HTMLElement,
-  fields: ObsField[],
-  joints: string[],
+  layouts: PolicyLayout[],
 ): ObservePanel {
   const button = document.createElement("button");
   button.type = "button";
@@ -49,51 +113,10 @@ export function createObservePanel(
   });
   panel.append(head, status, normToggle);
 
-  // Observation rows: one per value, grouped by field.
-  const cells: { value: HTMLElement; bar: HTMLElement | null }[] = [];
-  const barFields = new Set(["q", "prevAction"]);
-  const jointLabel = (i: number) => joints[i]?.replace("_", " ") ?? `joint ${i + 1}`;
-  const axis = ["x", "y", "z"];
-  for (const f of fields) {
-    const group = document.createElement("div");
-    group.className = "obs-group";
-    const h = document.createElement("h3");
-    h.textContent = f.unit ? `${f.label} (${f.unit})` : f.label;
-    group.appendChild(h);
-    for (let i = 0; i < f.size; i++) {
-      const row = document.createElement("div");
-      row.className = "obs-row";
-      const name = document.createElement("span");
-      name.textContent = f.size === 3 ? axis[i] : jointLabel(i);
-      const bar = barFields.has(f.name) ? document.createElement("span") : null;
-      if (bar) bar.className = "bar";
-      const value = document.createElement("span");
-      value.className = "num";
-      row.append(name, ...(bar ? [bar] : []), value);
-      group.appendChild(row);
-      cells.push({ value, bar });
-    }
-    panel.appendChild(group);
-  }
-
-  const outGroup = document.createElement("div");
-  outGroup.className = "obs-group output";
-  outGroup.innerHTML = `<h3>Output: joint target change per step (−1…+1)</h3>`;
-  const outs: { bar: HTMLElement; value: HTMLElement }[] = [];
-  for (let i = 0; i < joints.length; i++) {
-    const row = document.createElement("div");
-    row.className = "obs-row";
-    const name = document.createElement("span");
-    name.textContent = jointLabel(i);
-    const bar = document.createElement("span");
-    bar.className = "bar signed";
-    const value = document.createElement("span");
-    value.className = "num";
-    row.append(name, bar, value);
-    outGroup.appendChild(row);
-    outs.push({ bar, value });
-  }
-  panel.appendChild(outGroup);
+  // One layout per policy (reach, and the grasp policy if shipped): observation rows grouped by
+  // field, then the outputs. The step's observation size says which policy it came from.
+  const views = layouts.map((l) => buildView(l.fields, l.outputs, l.joints));
+  for (const v of views) panel.appendChild(v.el);
   root.appendChild(panel);
 
   const set = (open: boolean) => {
@@ -123,6 +146,10 @@ export function createObservePanel(
       status.textContent = active
         ? "Live: what the policy observes and outputs every 20 ms."
         : "Not in control. Showing what the policy would output right now.";
+      const view = views.find((v) => v.size === step.obsRaw.length);
+      for (const v of views) v.el.hidden = v !== view;
+      if (!view) return;
+      const { cells, outs } = view;
       for (let i = 0; i < cells.length; i++) {
         cells[i].value.textContent = fmt(showNorm ? step.obsNorm[i] : step.obsRaw[i]);
         if (cells[i].bar) setBar(cells[i].bar!, step.obsNorm[i] / 3);
