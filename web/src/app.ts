@@ -149,7 +149,15 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         const shown = msg.controllers.filter((c) => c.public || lab);
         modeSwitch = createModeSwitch(
           toolbar,
-          [{ id: MANUAL, label: "Manual" }, ...shown.map(({ id, label }) => ({ id, label }))],
+          [
+            {
+              id: MANUAL,
+              label: "Manual",
+              task: "reach",
+              description: "No controller: drag the arm's joints to pose it.",
+            },
+            ...shown,
+          ],
           (mode) => {
             // Controllers are created on first use; show a spinner until the worker confirms.
             if (mode !== latest?.mode && !used.has(mode)) modeSwitch?.setState(mode, "loading");
@@ -190,9 +198,8 @@ export function startApp({ worker, early, messages, init }: AppContext) {
           msg.observation.map((f) => f.label),
           hasPolicy ? new URL("shared/policy/reach.json", document.baseURI).href : null,
           shown.filter((c) => !c.public),
-          shown.some((c) => c.id === "grasp")
-            ? new URL("shared/grasp-eval/grasp.json", document.baseURI).href
-            : null,
+          shown.filter((c) => c.task === "grasp"),
+          (path) => new URL(`shared/${path}`, document.baseURI).href,
         );
         messages.hide();
         break;

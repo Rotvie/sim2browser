@@ -21,7 +21,7 @@ export interface PolicyHeader {
     run?: string;
     reward?: Record<string, number>;
     /** Grasp policy (004): demonstrations it learned from. */
-    demos?: { scripted: number; hand: number; handShare: number; noise: number[] };
+    demos?: { scripted: number; hand: number; dagger?: number; handShare: number; noise: number[] };
   };
   metrics?: {
     successRate: number;

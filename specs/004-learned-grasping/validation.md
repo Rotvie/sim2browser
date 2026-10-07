@@ -123,3 +123,13 @@ distribution shift, not fit.
 Pushed `7429b1e`; CI run 37632246983 green (parity, web, training, e2e, deploy). Public URL serves
 `shared/grasp-eval/grasp.json` (200) and `parity.json` v4 without `graspPolicy` (learned grasp not
 offered yet).
+
+### UI polish (2026-10-07)
+
+- Controller picker grouped by task ("Reach", "Grasp"), short names inside groups, descriptions
+  as tooltips; phone layout: one row per group (wraps with `?lab`). Subtitle mentions the cube.
+- Info panel grasp section: comparison table from every committed grasp report; lab rows tagged.
+  Lab reports committed: `naive-grasp` 26% / 5.7 s, `reactive-grasp` 100% / 3.1 s (seed 0).
+- SC-001 on mobile-chromium (local): 3005–3023 ms with these changes, 3019–3022 ms at the deployed
+  commit `5570cdb`: the known 3 s edge (roadmap open item), not caused by this change.
+

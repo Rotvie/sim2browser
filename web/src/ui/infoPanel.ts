@@ -27,7 +27,9 @@ export function createInfoPanel(
   observed: string[],
   policyHeaderUrl: string | null,
   labControllers: { label: string; description: string }[] = [],
-  graspEvalUrl: string | null = null,
+  /** Grasp controllers on the page, in mode-switch order. */
+  grasps: { id: string; label: string; public: boolean }[] = [],
+  sharedUrl: (path: string) => string = (p) => p,
 ): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -117,34 +119,78 @@ export function createInfoPanel(
     }
   };
 
-  // The grasp section, likewise, from shared/grasp-eval/<id>.json: the release evaluation's numbers.
+  // The grasp section: one row per grasp controller with a committed evaluation report
+  // (shared/grasp-eval/<id>.json, written by `npm run eval:grasp`), so a new grasp controller
+  // appears here once it has been measured. Numbers are shown as measured.
   const graspInfo = panel.querySelector<HTMLElement>(".grasp-info")!;
   let graspLoaded = false;
+  const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
   const loadGrasp = async () => {
-    if (graspLoaded || !graspEvalUrl) return;
+    if (graspLoaded || !grasps.length) return;
     graspLoaded = true;
-    try {
-      const r = (await (await fetch(graspEvalUrl)).json()) as GraspEval;
-      const failures = Object.entries(r.failures).filter(([, k]) => k > 0);
-      const t = r.medianTimeToLift;
-      graspInfo.innerHTML = `
-        <h3>Scripted grasp</h3>
-        <p>No learning: a script built on the baseline. It moves above the cube with the jaws
-          pointing down and turned to match the cube, descends, closes the gripper and lifts.
-          Only one jaw moves, so it comes down a little to one side of the cube. It reports a
-          failure instead of pretending.</p>
-        <dl>
-          <dt>Lifted the cube</dt><dd>${(r.successRate * 100).toFixed(1)}% <span class="${r.successRate >= 0.9 ? "ok" : "miss"}">(target ≥ 90%)</span></dd>
-          <dt>Median time to lift</dt><dd>${t === null ? "–" : `${t.toFixed(1)} s`} <span class="${t !== null && t <= 6 ? "ok" : "miss"}">(target ≤ 6 s)</span></dd>
-          <dt>Failures</dt><dd>${failures.length ? failures.map(([k, v]) => `${v} ${FAILURE_WORDS[k] ?? k}`).join(", ") : "none"}</dd>
-        </dl>
-        <p class="note">Measured on ${r.n} random cube placements in the reachable area (random
-          turn), from the starting pose. Success: the cube at least 5 cm up, held for 1 s, within
-          10 s. Numbers are shown as measured.</p>`;
-      graspInfo.hidden = false;
-    } catch {
+    const reports = await Promise.all(
+      grasps.map(async (c) => {
+        try {
+          const res = await fetch(sharedUrl(`grasp-eval/${c.id}.json`));
+          return res.ok ? { c, r: (await res.json()) as GraspEval } : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const rows = reports.filter((x) => x !== null);
+    if (!rows.length) {
       graspLoaded = false;
+      return;
     }
+    let learned = "";
+    if (grasps.some((c) => c.id === "learned-grasp")) {
+      try {
+        const h = (await (await fetch(sharedUrl("policy/grasp.json"))).json()) as PolicyHeader;
+        const d = h.trainedWith.demos;
+        learned = `<p><strong>Learned grasp</strong>: a neural network that imitates grasps instead
+          of following a script${
+            d
+              ? `: trained on ${d.scripted} generated and ${d.hand} hand-recorded demonstrations
+                 (hand share ${(d.handShare * 100).toFixed(0)}%)${
+                   d.dagger
+                     ? `, then on ${d.dagger} of its own attempts with every step corrected by an expert (DAgger)`
+                     : ""
+                 }`
+              : ""
+          }. It sees the cube's pose, not a camera image.</p>`;
+      } catch {
+        learned = "";
+      }
+    }
+    const n = rows[0]!.r.n;
+    graspInfo.innerHTML = `
+      <h3>Grasping the cube</h3>
+      <p><strong>Scripted grasp</strong>: no learning. A script built on the baseline moves
+        above the cube with the jaws pointing down and turned to match the cube, descends, closes
+        the gripper and lifts. Only one jaw moves, so it comes down a little to one side of the
+        cube. It reports a failure instead of pretending.</p>
+      ${learned}
+      <table class="grasp-table">
+        <thead><tr><th>Controller</th><th>Lifted</th><th>Median time</th><th>Failures</th></tr></thead>
+        <tbody>${rows
+          .map(({ c, r }) => {
+            const failures = Object.entries(r.failures).filter(([, k]) => k > 0);
+            const target = c.id === "grasp" ? 0.9 : c.id === "learned-grasp" ? 0.8 : null;
+            const cls = target === null ? "" : r.successRate >= target ? "ok" : "miss";
+            return `<tr data-controller="${c.id}">
+              <th scope="row">${c.label}${c.public ? "" : ` <span class="tag">lab</span>`}</th>
+              <td class="${cls}">${pct(r.successRate)}</td>
+              <td>${r.medianTimeToLift === null ? "–" : `${r.medianTimeToLift.toFixed(1)} s`}</td>
+              <td>${failures.length ? failures.map(([k, v]) => `${v} ${FAILURE_WORDS[k] ?? k}`).join(", ") : "none"}</td>
+            </tr>`;
+          })
+          .join("")}</tbody>
+      </table>
+      <p class="note">Measured on the same ${n} random cube placements in the reachable area
+        (random turn), from the starting pose. Success: the cube at least 5 cm up, held for 1 s,
+        within 10 s. Targets: scripted ≥ 90%; the learned grasp ships only if it lifts ≥ 80%.</p>`;
+    graspInfo.hidden = false;
   };
 
   const set = (open: boolean) => {

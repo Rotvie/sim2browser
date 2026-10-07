@@ -23,13 +23,10 @@ test.describe("004 P2: learned grasp @lg2", () => {
     test.setTimeout(60_000);
     const errors = collectConsoleErrors(page);
     const modes = page.getByRole("group", { name: "Controller" }).getByRole("button");
-    await expect(modes).toHaveText([
-      "Manual",
-      "Baseline",
-      "Learned",
-      "Scripted grasp",
-      "Learned grasp",
-    ]);
+    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Scripted", "Learned"]);
+    await expect(
+      page.getByRole("group", { name: "Grasp" }).getByRole("button", { name: "Learned grasp" }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Learned grasp", exact: true }).click();
     const chip = page.getByRole("status");
     await expect(chip).toContainText(/Running/, { timeout: 10_000 });

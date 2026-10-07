@@ -100,6 +100,7 @@ export function reactiveAction({ sim, parity, gripper, cube }: ReactiveState): {
 export const reactiveGrasp: ControllerDef = {
   id: "reactive-grasp",
   label: "Reactive grasp",
+  short: "Reactive",
   description:
     "The scripted grasp as a function of the current state only (no phases or timers): the expert that labels the learned grasp's training data (DAgger).",
   task: "grasp",

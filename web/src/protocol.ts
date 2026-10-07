@@ -58,7 +58,14 @@ export interface ReadyInfo {
   neutralPose: number[];
   maxReach: number;
   /** Automatic controllers this build offers (Manual is always available). */
-  controllers: { id: string; label: string; description: string; public: boolean }[];
+  controllers: {
+    id: string;
+    label: string;
+    short: string;
+    description: string;
+    public: boolean;
+    task: import("./control/registry").ControllerTask;
+  }[];
   /** Baseline design parameters, shown in the info panel (parity.json `baseline`). */
   baseline: import("./sim/parity").Parity["baseline"];
   /** Joints the policy observes and commands (parity.json `action.joints`). */

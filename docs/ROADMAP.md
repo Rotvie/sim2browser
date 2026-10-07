@@ -1,10 +1,18 @@
 # Roadmap
 
 Where the project stands and what comes next. The record of how each feature was built (spec,
-plan, tasks, measurements, decisions) is in [`specs/001-arm-reach/`](../specs/001-arm-reach/) and
-[`specs/002-grasp/`](../specs/002-grasp/), especially their `validation.md`.
+plan, tasks, measurements, decisions) is in `specs/<feature>/`, especially each `validation.md`.
 
-## Status (2026-10-04)
+## Status (2026-10-07)
+
+- **004-learned-grasping: in progress.** Deployed (P1, 2026-10-07): grasp controllers plug in by
+  `task: "grasp"` and are judged by the session; per-controller grasp evaluation
+  (`shared/grasp-eval/<id>.json`); demonstration recording (`?record`, `npm run demos`);
+  parity.json v4; controller picker grouped by task. Built, not shipped yet: the learned grasp
+  (behavior cloning + DAgger with a reactive expert, 96–98% on the selection placements without
+  hand demos). Next: record ≥ 20 hand demonstrations, final runs, one evaluation against the 80%
+  bar (`specs/004-learned-grasping/tasks.md`, T026 and T043–T047), then the comparison panel and
+  grasp parity fixtures (US3).
 
 - **001-arm-reach: shipped.** Live at https://rotvie.github.io/sim2browser/. P1 (pose the arm),
   P2 (DLS IK baseline reaches a draggable target) and P3 (PPO policy vs. baseline, policy view,
@@ -63,7 +71,7 @@ honest-evaluation discipline. The SO-100 is the arm the LeRobot community uses f
    - Gripper control in the UI; contact physics parity tests (Python vs. WASM with contacts).
    - Constitution check: Principle V (one robot, one page, one policy per task) still holds;
      a new task is a new feature.
-2. **004: learned grasping from demonstrations.**
+2. **004: learned grasping from demonstrations** (in progress, see Status).
    - Record demonstrations in the browser (dragging the target with the IK baseline is already
      a teleoperation interface), export them, train an imitation policy in Python, deploy it
      back and compare it with the scripted controller.
@@ -77,8 +85,9 @@ honest-evaluation discipline. The SO-100 is the arm the LeRobot community uses f
 ```bash
 cd ~/Downloads/misc/projects/sim2browser
 npm install && (cd training && uv sync)   # tooling
-npm run test:parity && (cd web && npm test)
+npm run test:parity && (cd web && npm test) && (cd training && uv run pytest)
 ```
 
-Then start the feature spec-first: `/speckit-specify` with a description of 002-grasp (step 1
-above), followed by `/speckit-plan`, `/speckit-tasks` and `/speckit-implement`.
+Then continue 004 from `specs/004-learned-grasping/tasks.md` (first open task) and its
+`quickstart.md`; measurements so far are in its `validation.md`. New features start spec-first:
+`/speckit-specify`, `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`.

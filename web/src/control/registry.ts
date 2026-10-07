@@ -52,8 +52,10 @@ export type ControllerTask = "reach" | "grasp";
 export interface ControllerDef {
   /** Stable id: used in the URL-free mode switch, eval CLI and reports. */
   id: string;
-  /** Short label for the mode switch. */
+  /** Name for the mode switch, status card and info panel. */
   label: string;
+  /** Shorter name inside its task's group in the mode switch (e.g. "Scripted" under "Grasp"). */
+  short?: string;
   /** One or two sentences for the info panel. */
   description: string;
   /** Shown on the public page; otherwise only with `?lab` in the URL. */
@@ -91,6 +93,7 @@ export const learned: ControllerDef = {
 export const learnedGrasp: ControllerDef = {
   id: "learned-grasp",
   label: "Learned grasp",
+  short: "Learned",
   description:
     "A policy learned by imitation from scripted and hand-recorded grasps (behavior cloning).",
   task: "grasp",
@@ -111,6 +114,7 @@ export const learnedGrasp: ControllerDef = {
 export const grasp: ControllerDef = {
   id: "grasp",
   label: "Scripted grasp",
+  short: "Scripted",
   task: "grasp",
   description:
     "Scripted top-down grasp built on the baseline: approach, descend, close, lift. No learning.",

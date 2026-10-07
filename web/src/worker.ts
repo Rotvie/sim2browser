@@ -3,6 +3,7 @@
 import type { FromWorker, ToWorker } from "./protocol";
 import { createSim, getMujoco } from "./sim/mujoco";
 import { loadShared, ParityError, type ReadBytes } from "./sim/parity";
+import { taskOf } from "./control/registry";
 import { createRecordingMode, type RecordingMode } from "./sim/recordingMode";
 import { servedPath } from "./sim/served";
 import { createSession, type ModeChange, type Session } from "./sim/session";
@@ -89,11 +90,13 @@ async function init(baseUrl: string, record: boolean) {
       graspObservation: parity.graspPolicy?.observation.fields ?? null,
       cube: { size: parity.cube.size, body: parity.cube.body },
       graspRegion: parity.grasp.region,
-      controllers: session.controllers.map(({ id, label, description, public: pub }) => ({
-        id,
-        label,
-        description,
-        public: pub,
+      controllers: session.controllers.map((d) => ({
+        id: d.id,
+        label: d.label,
+        short: d.short ?? d.label,
+        description: d.description,
+        public: d.public,
+        task: taskOf(d),
       })),
     });
     postSnapshot(session);

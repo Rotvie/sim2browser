@@ -24,7 +24,9 @@ test.describe("002 P2: scripted grasp @g2", () => {
     test.setTimeout(60_000);
     const errors = collectConsoleErrors(page);
     const modes = page.getByRole("group", { name: "Controller" }).getByRole("button");
-    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Scripted grasp"]);
+    // Grouped by task (004): Reach, then Grasp; inside a group the short name is shown.
+    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Scripted"]);
+    await expect(page.getByRole("group", { name: "Grasp" })).toBeVisible();
     await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     const chip = page.getByRole("status");
     await expect(chip).toContainText(/Approaching|Descending/, { timeout: 5000 });

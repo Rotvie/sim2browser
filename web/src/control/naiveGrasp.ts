@@ -14,6 +14,7 @@ import type { ControllerDef } from "./registry";
 export const naiveGrasp: ControllerDef = {
   id: "naive-grasp",
   label: "Naive grasp",
+  short: "Naive",
   description:
     "Example grasp plug-in: top-down grasp at the cube centre that never turns the wrist to the cube.",
   task: "grasp",

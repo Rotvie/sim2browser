@@ -4,8 +4,13 @@ Spec US1–US3; research R7, R12. Builds on 002's `contracts/ui.md`.
 
 ## Mode switch
 
-- Order: Manual · Baseline · Learned · Scripted grasp · Learned grasp (· lab controllers with
-  `?lab`). The 002 "Grasp" button is relabeled "Scripted grasp"; id stays `grasp`.
+- Grouped by task (2026-10-07): a "Reach" group (Manual · Baseline · Learned · lab reach
+  controllers) and a "Grasp" group (Scripted · Learned · lab grasp controllers), each a segmented
+  control with a small group label; the group comes from the registry's `task`, so a new
+  controller lands in its group without UI changes. Inside a group a button shows the registry's
+  `short` name ("Scripted"); its accessible name is the full label ("Scripted grasp") and its
+  tooltip the registry description. The 002 "Grasp" button is now "Scripted grasp" (id `grasp`).
+  On narrow screens each group is one row, wrapping if needed.
 - "Learned grasp" appears only if `parity.json` has `graspPolicy` (else the page is 002's).
 - Must fit a 360 px wide viewport without horizontal scroll (e2e check); if it does not, the two
   grasp buttons shorten to "Grasp: script" / "Grasp: learned".
@@ -26,8 +31,9 @@ Spec US1–US3; research R7, R12. Builds on 002's `contracts/ui.md`.
 
 ## Info panel, grasp section
 
-- Table: controller · success (n) · median time to lift · main failures, one row per public grasp
-  controller with a report (scripted, learned).
+- Table: controller · lifted · median time to lift · failures, one row per grasp controller on
+  the page that has a committed report (`shared/grasp-eval/<id>.json`); lab controllers (with
+  `?lab`) are tagged "lab". Measuring a new grasp controller is all it takes to get a row.
 - Line under the table: "Learned grasp: behavior cloning from N scripted and M hand
   demonstrations (hand share X%); 3 training runs, the shipped one chosen on separate
   placements." Values from `grasp.json trainedWith` and `metrics`.

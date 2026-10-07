@@ -1,0 +1,1019 @@
+{
+  "version": 2,
+  "controller": "naive-grasp",
+  "task": "grasp",
+  "parityJsonSha256": "a1230066e90320a26c1b1b197b386c7f73255e001353261a702004458aca7e84",
+  "policySha256": null,
+  "n": 100,
+  "seed": 0,
+  "successRate": 0.26,
+  "medianTimeToLift": 5.74,
+  "failures": {
+    "missed": 0,
+    "slipped": 19,
+    "knocked": 55,
+    "timeout": 0
+  },
+  "placements": [
+    {
+      "pos": [
+        -0.167796,
+        -0.073438
+      ],
+      "yaw": 0.350715,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.013757,
+        -0.194623
+      ],
+      "yaw": 0.856161,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.088719,
+        -0.24459
+      ],
+      "yaw": 0.716294,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.139996,
+        -0.207085
+      ],
+      "yaw": 0.153705,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.064057,
+        -0.288001
+      ],
+      "yaw": 1.131438,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.169411,
+        -0.191207
+      ],
+      "yaw": 0.983619,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.185889,
+        -0.148319
+      ],
+      "yaw": 0.380024,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.114931,
+        -0.257643
+      ],
+      "yaw": 0.137963,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.217496,
+        -0.143464
+      ],
+      "yaw": 0.866639,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.078442,
+        -0.228595
+      ],
+      "yaw": 0.153069,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.017522,
+        -0.278986
+      ],
+      "yaw": 0.321648,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.068069,
+        -0.175517
+      ],
+      "yaw": 0.393501,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.113568,
+        -0.188251
+      ],
+      "yaw": 0.278737,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.140756,
+        -0.159197
+      ],
+      "yaw": 0.681135,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.121461,
+        -0.204931
+      ],
+      "yaw": 1.188392,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.013299,
+        -0.302359
+      ],
+      "yaw": 0.841135,
+      "success": true,
+      "timeToLift": 5.78,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.051164,
+        -0.225957
+      ],
+      "yaw": 0.330184,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.216574,
+        -0.094743
+      ],
+      "yaw": 0.609561,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.023162,
+        -0.301811
+      ],
+      "yaw": 0.768423,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.134915,
+        -0.070062
+      ],
+      "yaw": 0.265381,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.079047,
+        -0.137201
+      ],
+      "yaw": 0.530875,
+      "success": true,
+      "timeToLift": 5.76,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.160705,
+        -0.076148
+      ],
+      "yaw": 1.397293,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.171671,
+        -0.14681
+      ],
+      "yaw": 0.11887,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.099243,
+        -0.180567
+      ],
+      "yaw": 1.291241,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.215625,
+        -0.145326
+      ],
+      "yaw": 0.347728,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.073958,
+        -0.227509
+      ],
+      "yaw": 0.053905,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.17138,
+        -0.216544
+      ],
+      "yaw": 0.878529,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.236245,
+        -0.120699
+      ],
+      "yaw": 0.913391,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.172362,
+        -0.199505
+      ],
+      "yaw": 0.483947,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.021559,
+        -0.264953
+      ],
+      "yaw": 0.000455,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.051603,
+        -0.195268
+      ],
+      "yaw": 0.9705,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.100336,
+        -0.171462
+      ],
+      "yaw": 1.477536,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.170543,
+        -0.175773
+      ],
+      "yaw": 1.227648,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.031999,
+        -0.264296
+      ],
+      "yaw": 0.538289,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.05409,
+        -0.235813
+      ],
+      "yaw": 0.862036,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.134479,
+        -0.21514
+      ],
+      "yaw": 0.866313,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.010197,
+        -0.282858
+      ],
+      "yaw": 0.021818,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.095801,
+        -0.24439
+      ],
+      "yaw": 0.128193,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.200866,
+        -0.18393
+      ],
+      "yaw": 1.337198,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.061715,
+        -0.16297
+      ],
+      "yaw": 0.189495,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.212298,
+        -0.137488
+      ],
+      "yaw": 1.239681,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.181804,
+        -0.191468
+      ],
+      "yaw": 0.241236,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.092645,
+        -0.281277
+      ],
+      "yaw": 0.358928,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.008042,
+        -0.272915
+      ],
+      "yaw": 1.219325,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.145288,
+        -0.238812
+      ],
+      "yaw": 0.501984,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.093416,
+        -0.144896
+      ],
+      "yaw": 1.33942,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.040555,
+        -0.298462
+      ],
+      "yaw": 1.056145,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.140787,
+        -0.128865
+      ],
+      "yaw": 1.484021,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.204664,
+        -0.176723
+      ],
+      "yaw": 0.856444,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.206827,
+        -0.130557
+      ],
+      "yaw": 1.05773,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.106313,
+        -0.124999
+      ],
+      "yaw": 0.35755,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.181387,
+        -0.198686
+      ],
+      "yaw": 0.128218,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.169833,
+        -0.107284
+      ],
+      "yaw": 1.315352,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.00691,
+        -0.297376
+      ],
+      "yaw": 1.224161,
+      "success": true,
+      "timeToLift": 5.72,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.167766,
+        -0.211504
+      ],
+      "yaw": 1.354906,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.028072,
+        -0.217101
+      ],
+      "yaw": 0.924111,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.033215,
+        -0.19517
+      ],
+      "yaw": 0.47803,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.081405,
+        -0.226263
+      ],
+      "yaw": 1.547271,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.052998,
+        -0.172738
+      ],
+      "yaw": 0.795823,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.044594,
+        -0.197127
+      ],
+      "yaw": 0.105536,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.105039,
+        -0.113616
+      ],
+      "yaw": 0.167251,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.125666,
+        -0.193141
+      ],
+      "yaw": 0.505526,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.159149,
+        -0.198011
+      ],
+      "yaw": 0.591488,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.191407,
+        -0.175811
+      ],
+      "yaw": 1.396545,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.04897,
+        -0.260781
+      ],
+      "yaw": 0.490013,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.058396,
+        -0.22057
+      ],
+      "yaw": 0.22505,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.100301,
+        -0.122801
+      ],
+      "yaw": 1.03705,
+      "success": true,
+      "timeToLift": 5.8,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.160222,
+        -0.233569
+      ],
+      "yaw": 0.230303,
+      "success": true,
+      "timeToLift": 5.76,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.175626,
+        -0.214408
+      ],
+      "yaw": 1.563311,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.125624,
+        -0.221704
+      ],
+      "yaw": 0.542272,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.026881,
+        -0.232809
+      ],
+      "yaw": 1.422077,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.055151,
+        -0.203012
+      ],
+      "yaw": 1.006711,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.0601,
+        -0.288835
+      ],
+      "yaw": 0.794127,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.000603,
+        -0.199245
+      ],
+      "yaw": 0.720324,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.053052,
+        -0.173169
+      ],
+      "yaw": 0.604046,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.101143,
+        -0.169845
+      ],
+      "yaw": 0.173587,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.164906,
+        -0.157421
+      ],
+      "yaw": 0.743615,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.027659,
+        -0.235008
+      ],
+      "yaw": 0.990332,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.083832,
+        -0.175331
+      ],
+      "yaw": 0.76646,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.117791,
+        -0.200993
+      ],
+      "yaw": 0.322325,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.186758,
+        -0.15407
+      ],
+      "yaw": 0.749615,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.156804,
+        -0.159276
+      ],
+      "yaw": 0.548705,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.082327,
+        -0.144488
+      ],
+      "yaw": 1.28277,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        0.189311,
+        -0.197818
+      ],
+      "yaw": 0.200572,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.040498,
+        -0.225705
+      ],
+      "yaw": 0.752255,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.169617,
+        -0.111679
+      ],
+      "yaw": 1.060769,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.02845,
+        -0.282137
+      ],
+      "yaw": 1.550629,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.050065,
+        -0.250632
+      ],
+      "yaw": 0.895856,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.077067,
+        -0.183184
+      ],
+      "yaw": 1.015874,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.064558,
+        -0.288502
+      ],
+      "yaw": 1.373487,
+      "success": true,
+      "timeToLift": 5.76,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.00183,
+        -0.280739
+      ],
+      "yaw": 1.518609,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        -0.081063,
+        -0.172997
+      ],
+      "yaw": 0.963735,
+      "success": false,
+      "timeToLift": null,
+      "failure": "slipped"
+    },
+    {
+      "pos": [
+        -0.14312,
+        -0.209613
+      ],
+      "yaw": 0.725584,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.159531,
+        -0.10199
+      ],
+      "yaw": 1.116656,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.186455,
+        -0.14864
+      ],
+      "yaw": 1.095585,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.151027,
+        -0.214372
+      ],
+      "yaw": 0.549681,
+      "success": true,
+      "timeToLift": 5.74,
+      "failure": null
+    },
+    {
+      "pos": [
+        0.049477,
+        -0.258351
+      ],
+      "yaw": 1.250656,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.181268,
+        -0.143016
+      ],
+      "yaw": 0.450917,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        -0.084137,
+        -0.200119
+      ],
+      "yaw": 1.101977,
+      "success": false,
+      "timeToLift": null,
+      "failure": "knocked"
+    },
+    {
+      "pos": [
+        0.168425,
+        -0.241976
+      ],
+      "yaw": 1.303095,
+      "success": true,
+      "timeToLift": 5.76,
+      "failure": null
+    }
+  ]
+}
