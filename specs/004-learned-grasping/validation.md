@@ -117,3 +117,9 @@ distribution shift, not fit.
   grasp left the cube, so "last attempt" was usually the knocked cube (found by the @lg2 e2e test;
   data-model and contracts/ui.md updated).
 
+
+### P1 deploy (T028, 2026-10-07)
+
+Pushed `7429b1e`; CI run 37632246983 green (parity, web, training, e2e, deploy). Public URL serves
+`shared/grasp-eval/grasp.json` (200) and `parity.json` v4 without `graspPolicy` (learned grasp not
+offered yet).
