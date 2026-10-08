@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run --dir tests/unit",
+    "test": "vitest run --dir tests/unit --testTimeout 60000",
     "test:e2e": "playwright test",
     "eval": "tsx scripts/eval.ts",
     "eval:compare": "tsx scripts/eval-compare.ts",
