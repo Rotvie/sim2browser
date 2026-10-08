@@ -279,7 +279,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
       const step = latest.policyStep;
       const want = task === "grasp" ? graspObs : reachObs;
       const mine = step && step.obsRaw.length === want ? step : undefined;
-      observe?.update(mine, !!mine && latest.policyStepActive);
+      observe?.update(mine, !!mine && latest.policyStepActive, latest.t);
     }
     // On narrow screens the policy panel is a bottom sheet: keep the arm above it.
     const sheet = window.innerWidth < 700 ? observe?.openElement() : null;

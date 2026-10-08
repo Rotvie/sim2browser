@@ -144,3 +144,12 @@ or learned grasp the target is hidden, so "drag the target to cancel" becomes th
 (joint grab and controller switch still cancel). e2e updated; all suites pass, including the
 learned-grasp ones against the DAgger pilot policy exported temporarily (shared/ restored).
 
+### Policy timeline (2026-10-08, user request)
+
+Timeline view in the policy panel (`web/src/ui/timeline.ts`): small multiples per field over a
+moving window, shared crosshair and tooltip, tap/drag on touch. Palette: the 6 leading slots of the
+dataviz reference order, validated light (adjacent CVD ΔE ≥ 9.1, normal-vision ≥ 19.6); 3 slots
+below 3:1 contrast, so every line is named in its legend and the Numbers view is the table
+equivalent. Checked visually on desktop (reach; grasp with the DAgger pilot exported temporarily:
+jaw opening, cube → tip converging, gripper output flipping at the close) and on a phone sheet.
+

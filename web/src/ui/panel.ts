@@ -5,11 +5,16 @@
  */
 import type { PolicyStep } from "../control/learned";
 import type { ObsField } from "../sim/parity";
+import { createTimeline, stripsFor, type Timeline } from "./timeline";
+
+/** Strips shown by default in the timeline (the rest are one click away). */
+const DEFAULT_STRIPS = ["q", "jaw", "tipToTarget", "cubeToTip", "output"];
 
 const fmt = (v: number) => (Math.abs(v) < 0.0005 ? "0.000" : v.toFixed(3));
 
 export interface ObservePanel {
-  update(step: PolicyStep | undefined, active: boolean): void;
+  /** `t`: simulation time of the step (the timeline's clock). */
+  update(step: PolicyStep | undefined, active: boolean, t: number): void;
   /** The panel element, or null while it is closed. */
   openElement(): HTMLElement | null;
   /** Only where the current task has a learned policy (004); hiding also closes it. */
@@ -113,12 +118,37 @@ export function createObservePanel(
     normToggle.setAttribute("aria-pressed", String(showNorm));
     normToggle.textContent = showNorm ? "Show raw values" : "Show normalized values";
   });
-  panel.append(head, status, normToggle);
+  // Timeline (default) or Numbers (the table view: every value as text).
+  const viewSwitch = document.createElement("div");
+  viewSwitch.className = "tl-seg view-switch";
+  viewSwitch.setAttribute("role", "group");
+  viewSwitch.setAttribute("aria-label", "View");
+  let timelineView = true;
+  for (const [label, tl] of [
+    ["Timeline", true],
+    ["Numbers", false],
+  ] as const) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.setAttribute("aria-pressed", String(tl === timelineView));
+    b.addEventListener("click", () => {
+      timelineView = tl;
+      for (const x of viewSwitch.querySelectorAll("button"))
+        x.setAttribute("aria-pressed", String(x === b));
+    });
+    viewSwitch.appendChild(b);
+  }
+  panel.append(head, status, viewSwitch, normToggle);
 
   // One layout per policy (reach, and the grasp policy if shipped): observation rows grouped by
   // field, then the outputs. The step's observation size says which policy it came from.
   const views = layouts.map((l) => buildView(l.fields, l.outputs, l.joints));
   for (const v of views) panel.appendChild(v.el);
+  const timelines: Timeline[] = layouts.map((l) =>
+    createTimeline(stripsFor(l.fields, l.outputs, l.joints), DEFAULT_STRIPS),
+  );
+  for (const tl of timelines) panel.appendChild(tl.el);
   root.appendChild(panel);
 
   const set = (open: boolean) => {
@@ -141,7 +171,11 @@ export function createObservePanel(
       button.hidden = !on;
       if (!on) set(false);
     },
-    update(step, active) {
+    update(step, active, t) {
+      // Every step feeds its policy's timeline, also while the panel is closed, so opening it
+      // shows the last seconds at once.
+      const which = step ? views.findIndex((v) => v.size === step.obsRaw.length) : -1;
+      if (step && which >= 0) timelines[which].push(t, step);
       if (panel.hidden) return;
       if (!step) {
         status.textContent = "Select Learned to load the policy.";
@@ -152,10 +186,14 @@ export function createObservePanel(
       status.textContent = active
         ? "Live: what the policy observes and outputs every 20 ms."
         : "Not in control. Showing what the policy would output right now.";
-      const view = views.find((v) => v.size === step.obsRaw.length);
-      for (const v of views) v.el.hidden = v !== view;
-      if (!view) return;
-      const { cells, outs } = view;
+      views.forEach((v, i) => (v.el.hidden = timelineView || i !== which));
+      timelines.forEach((tl, i) => (tl.el.hidden = !timelineView || i !== which));
+      if (which < 0) return;
+      if (timelineView) {
+        timelines[which].draw(showNorm);
+        return;
+      }
+      const { cells, outs } = views[which];
       for (let i = 0; i < cells.length; i++) {
         cells[i].value.textContent = fmt(showNorm ? step.obsNorm[i] : step.obsRaw[i]);
         if (cells[i].bar) setBar(cells[i].bar!, step.obsNorm[i] / 3);

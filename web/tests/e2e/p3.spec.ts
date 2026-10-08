@@ -78,6 +78,7 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     await expect(panel).toContainText("Joint angles");
     await expect(panel).toContainText("Wrist Pitch");
     await expect(panel).not.toContainText("Wrist Roll"); // not observed or commanded
+    await panel.getByRole("button", { name: "Numbers" }).click(); // the table view (004)
     const pt = (await page.evaluate(() => window.__sim2browser.targetScreenPoint()))!;
     await page.mouse.move(pt[0], pt[1]);
     await page.mouse.down();
@@ -92,6 +93,30 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
     }
     await page.mouse.up();
     expect(seen.size).toBeGreaterThanOrEqual(8);
+  });
+
+  test("the policy timeline (004): strips by default, hover reads values out", async ({ page }) => {
+    await selectLearned(page);
+    await page.getByRole("button", { name: "Policy view" }).click();
+    const panel = page.getByRole("region", { name: "What the policy sees" });
+    await expect(panel.getByRole("button", { name: "Timeline" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const strips = panel.locator(".tl-strip:visible");
+    await expect(strips).toHaveCount(3); // joint angles, tip → target, output
+    await expect(strips.first()).toContainText("Joint angles");
+    await panel.getByRole("button", { name: "Joint speeds" }).click();
+    await expect(strips).toHaveCount(4);
+    await page.waitForTimeout(1000);
+    // Hover on desktop, a tap on touch screens: click covers both.
+    const canvas = strips.first().locator("canvas");
+    const box = (await canvas.boundingBox())!;
+    await canvas.click({ position: { x: box.width * 0.8, y: box.height / 2 } });
+    const tip = panel.locator(".tl-tip");
+    await expect(tip).toBeVisible();
+    await expect(tip).toContainText("Rotation");
+    await expect(tip).toContainText(/-?\d+\.\d{3}/);
   });
 
   test("the info panel shows the measured results", async ({ page }) => {

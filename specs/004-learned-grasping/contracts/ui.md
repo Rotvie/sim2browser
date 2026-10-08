@@ -33,8 +33,17 @@ Spec US1–US3; research R7, R12. Builds on 002's `contracts/ui.md`.
 
 ## Policy view
 
-- With Learned grasp active: the 32 grasp inputs grouped by field labels from `parity.json`, and
-  the 6 outputs ("Joint changes" ×5, "Gripper" shown as open/close).
+- **Timeline** (default, 2026-10-08): small multiples over a moving window (5 / 10 / 20 s, pause),
+  one strip per observation field plus the outputs; chips choose the strips (default: joint
+  angles, jaw, tip → target or cube → tip, output). Each strip: its own y-axis, at most 6 lines
+  (2px), a legend with names (none for a single line), a shared crosshair; hover (or tap / drag on
+  touch) shows a tooltip with every line's value at that moment. Colors follow the entity (joint i
+  the same everywhere; x, y, z the first three slots; the gripper its own), from the dataviz
+  reference palette, validated as a 6-slot light set. Raw / normalized toggle applies.
+- **Numbers**: every input and output as text (the table view).
+- Shows the current task's policy: Reach → the reach policy (18 inputs, 4 outputs); Grasp → the
+  grasp policy (32 inputs, outputs "Joint changes" ×5 and "Gripper (> 0 closes)"). History is kept
+  per policy, also while the panel is closed.
 
 ## Info panel, grasp section
 
