@@ -37,6 +37,11 @@ Spec US1–US3; research R7, R12. Builds on 002's `contracts/ui.md`.
 
 ## Policy view
 
+- **Docked** (2026-10-08): the policy view is the bottom dock's drawer, directly above the
+  controls in one card (the "control panel"); open, the dock widens to the screen (max 1120 px)
+  and the camera keeps the arm above it. Timeline strips sit side by side (grid, ≥ 300 px per
+  strip; one column on phones), each with its own time scale; Numbers uses the same grid.
+
 - **Timeline** (default, 2026-10-08): small multiples over a moving window (5 / 10 / 20 s, pause),
   one strip per observation field plus the outputs; chips choose the strips (default: joint
   angles, jaw, tip → target or cube → tip, output). Each strip: its own y-axis, at most 6 lines

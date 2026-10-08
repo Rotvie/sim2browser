@@ -36,6 +36,7 @@ const barFields = new Set(["q", "prevAction"]);
 
 function buildView(fields: ObsField[], outputs: string[], joints: string[]) {
   const el = document.createElement("div");
+  el.className = "obs-view";
   const cells: { value: HTMLElement; bar: HTMLElement | null }[] = [];
   const jointLabel = (i: number) => joints[i]?.replace("_", " ") ?? `output ${i + 1}`;
   for (const f of fields) {
@@ -152,7 +153,9 @@ export function createObservePanel(
     createTimeline(stripsFor(l.fields, l.outputs, l.joints), DEFAULT_STRIPS),
   );
   for (const tl of timelines) panel.appendChild(tl.el);
-  root.appendChild(panel);
+  // 004: the panel is the dock's drawer, directly above the controls (one control panel).
+  if (toolbar.parentElement?.classList.contains("dock")) toolbar.before(panel);
+  else root.appendChild(panel);
 
   const set = (open: boolean) => {
     panel.hidden = !open;

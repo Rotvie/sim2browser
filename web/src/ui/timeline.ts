@@ -169,6 +169,7 @@ export function createTimeline(strips: Strip[], defaults: string[]): Timeline {
     hi: HTMLElement;
   }
   const views: View[] = [];
+  const xLabels: [HTMLElement, HTMLElement][] = [];
   let hoverX: number | null = null; // fraction of the plot width, shared by all strips
 
   for (const s of strips) {
@@ -211,7 +212,13 @@ export function createTimeline(strips: Strip[], defaults: string[]): Timeline {
     const lo = document.createElement("span");
     lo.className = "tl-axis lo";
     plot.append(canvas, hi, lo);
-    box.append(head, plot);
+    const xAxis = document.createElement("div");
+    xAxis.className = "tl-x";
+    const older = document.createElement("span");
+    const now = document.createElement("span");
+    xAxis.append(older, now);
+    box.append(head, plot, xAxis);
+    xLabels.push([older, now]);
     body.appendChild(box);
     views.push({ s, box, canvas, lo, hi });
 
@@ -234,9 +241,6 @@ export function createTimeline(strips: Strip[], defaults: string[]): Timeline {
       tip.hidden = true;
     });
   }
-  const timeAxis = document.createElement("div");
-  timeAxis.className = "tl-time";
-  body.appendChild(timeAxis);
 
   const layout = () => {
     for (const v of views) v.box.hidden = !shown.has(v.s.key);
@@ -306,12 +310,10 @@ export function createTimeline(strips: Strip[], defaults: string[]): Timeline {
     draw(norm) {
       normalized = norm;
       const { from, to, tEnd } = visible();
-      timeAxis.textContent = "";
-      const left = document.createElement("span");
-      left.textContent = `−${windowS} s`;
-      const right = document.createElement("span");
-      right.textContent = paused ? "paused" : "now";
-      timeAxis.append(left, right);
+      for (const [older, now] of xLabels) {
+        older.textContent = `−${windowS} s`;
+        now.textContent = paused ? "paused" : "now";
+      }
       for (const v of views) {
         if (v.box.hidden) continue;
         const { s, canvas } = v;

@@ -52,9 +52,10 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   const toolbar = document.getElementById("toolbar")!;
   const view = createScene(canvas);
   // Panels sit above the toolbar, whose height changes when it wraps on narrow screens.
+  const dock = document.getElementById("dock") ?? toolbar;
   new ResizeObserver(() =>
-    document.documentElement.style.setProperty("--toolbar-h", `${toolbar.offsetHeight}px`),
-  ).observe(toolbar);
+    document.documentElement.style.setProperty("--toolbar-h", `${dock.offsetHeight}px`),
+  ).observe(dock);
   const send = (msg: ToWorker) => worker.postMessage(msg);
   const interp = new PoseInterpolator();
   const stats = new FrameStats();
@@ -283,8 +284,9 @@ export function startApp({ worker, early, messages, init }: AppContext) {
       observe?.update(mine, !!mine && latest.policyStepActive, latest.t);
     }
     // On narrow screens the policy panel is a bottom sheet: keep the arm above it.
-    const sheet = window.innerWidth < 700 ? observe?.openElement() : null;
-    view.setBottomInset(sheet ? canvas.clientHeight - sheet.getBoundingClientRect().top : 0);
+    // With the policy drawer open, keep the arm above the dock.
+    const drawer = observe?.openElement();
+    view.setBottomInset(drawer ? canvas.clientHeight - dock.getBoundingClientRect().top : 0);
     hint.place(task === "reach" ? (target?.screenPoint() ?? null) : null);
     const cubeAt = latest?.cube.pos;
     cubeHint.place(
