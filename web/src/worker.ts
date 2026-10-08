@@ -97,6 +97,7 @@ async function init(baseUrl: string, record: boolean) {
         description: d.description,
         public: d.public,
         task: taskOf(d),
+        kind: d.kind ?? "engineered",
       })),
     });
     postSnapshot(session);

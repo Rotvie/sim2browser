@@ -3,7 +3,7 @@
  * while parity.json ships no grasp policy (the learned grasp is then not offered at all).
  */
 import { readFileSync } from "node:fs";
-import { collectConsoleErrors, dragTarget, waitReady } from "./helpers";
+import { collectConsoleErrors, dragTarget, openGraspByHand } from "./helpers";
 import { expect, test } from "./fixtures";
 
 const parity = JSON.parse(
@@ -14,19 +14,14 @@ test.describe("004 P2: learned grasp @lg2", () => {
   test.skip(!parity.graspPolicy, "no grasp policy shipped (parity.json has no graspPolicy)");
 
   test.beforeEach(async ({ page }) => {
-    await page.goto("./");
-    await waitReady(page);
-    await page.waitForTimeout(300);
+    await openGraspByHand(page);
   });
 
   test("offers Learned grasp; an attempt ends with an outcome", async ({ page }) => {
     test.setTimeout(60_000);
     const errors = collectConsoleErrors(page);
     const modes = page.getByRole("group", { name: "Controller" }).getByRole("button");
-    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Scripted", "Learned"]);
-    await expect(
-      page.getByRole("group", { name: "Grasp" }).getByRole("button", { name: "Learned grasp" }),
-    ).toBeVisible();
+    await expect(modes.nth(2)).toHaveAccessibleName("Learned grasp");
     await page.getByRole("button", { name: "Learned grasp", exact: true }).click();
     const chip = page.getByRole("status");
     await expect(chip).toContainText(/Running/, { timeout: 10_000 });
@@ -56,10 +51,13 @@ test.describe("004 P2: learned grasp @lg2", () => {
     await expect(chip).toContainText(/Approaching|Descending|Closing|Lifting|Holding|Lifted/);
   });
 
-  test("a target drag during a learned grasp hands over to the baseline", async ({ page }) => {
+  test("taking over by hand during a learned grasp hands over to the baseline", async ({
+    page,
+  }) => {
     await page.getByRole("button", { name: "Learned grasp", exact: true }).click();
     await page.waitForTimeout(500);
-    await dragTarget(page, 40, -30);
+    await page.getByRole("button", { name: "By hand" }).click();
+    await dragTarget(page, 40, -30); // the target is back while grasping by hand
     await expect
       .poll(() => page.evaluate(() => window.__sim2browser.snapshot!.mode))
       .toBe("baseline");

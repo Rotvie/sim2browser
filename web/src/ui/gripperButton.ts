@@ -8,6 +8,8 @@ import type { GripperCommand } from "../sim/parity";
 export interface GripperButton {
   /** Reflect the command from the latest snapshot. */
   show(command: GripperCommand): void;
+  /** Only the Grasp task uses the gripper (004); key G is ignored while hidden. */
+  setVisible(on: boolean): void;
 }
 
 export function createGripperButton(
@@ -22,6 +24,7 @@ export function createGripperButton(
   button.addEventListener("click", toggle);
   document.addEventListener("keydown", (e) => {
     if (e.key !== "g" && e.key !== "G") return;
+    if (button.hidden) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const t = e.target as HTMLElement | null;
     if (t?.closest("input, textarea, select, [contenteditable]")) return;
@@ -29,6 +32,9 @@ export function createGripperButton(
   });
   toolbar.appendChild(button);
   const api: GripperButton = {
+    setVisible(on) {
+      button.hidden = !on;
+    },
     show(command) {
       if (command === current) return;
       current = command;

@@ -3,7 +3,7 @@
  * by hand (lift, hold, drop, hold across switches, refusals) is tested on the worker's Session in
  * tests/unit/byHand.test.ts; this covers the page: cube, gripper button and key, cube drag, reset.
  */
-import { collectConsoleErrors, dragCube, waitReady } from "./helpers";
+import { openGraspByHand, collectConsoleErrors, dragCube } from "./helpers";
 import { expect, test } from "./fixtures";
 
 const snap = (page: import("@playwright/test").Page) =>
@@ -14,9 +14,7 @@ const snap = (page: import("@playwright/test").Page) =>
 
 test.describe("002 P1: gripper and cube by hand @g1", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("./");
-    await waitReady(page);
-    await page.waitForTimeout(300);
+    await openGraspByHand(page); // 004: grasping by hand lives in the Grasp task
   });
 
   test("the cube rests in front of the arm; the gripper button and G toggle the jaw", async ({

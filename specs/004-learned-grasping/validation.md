@@ -133,3 +133,14 @@ offered yet).
 - SC-001 on mobile-chromium (local): 3005–3023 ms with these changes, 3019–3022 ms at the deployed
   commit `5570cdb`: the known 3 s edge (roadmap open item), not caused by this change.
 
+### Task-first interface (2026-10-08, user decision)
+
+The grouped picker of 2026-10-07 still led with algorithms: the page always opened with the
+target out, the task changed only as a side effect, and grasping by hand had no entry. Replaced by
+task tabs (Reach | Grasp) and per-task slots You · Engineered · Learned (· Lab), with the scene
+showing only what the task uses (`web/src/ui/taskControls.ts`; `modeSwitch.ts` deleted). Default
+first visit: Reach, Engineered (user choice). Behavior change against 002 FR-012: during a scripted
+or learned grasp the target is hidden, so "drag the target to cancel" becomes the "By hand" slot
+(joint grab and controller switch still cancel). e2e updated; all suites pass, including the
+learned-grasp ones against the DAgger pilot policy exported temporarily (shared/ restored).
+

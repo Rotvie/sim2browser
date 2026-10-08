@@ -131,3 +131,16 @@ export async function dragCube(page: Page, x: number, y: number, steps = 20) {
   await page.mouse.up();
   await page.waitForTimeout(200);
 }
+
+/**
+ * 004: open the Grasp task (via ?task=grasp, which starts the scripted grasp) and take over by
+ * hand, so the arm waits for the test. `query` is extra URL parameters (e.g. "record").
+ */
+export async function openGraspByHand(page: Page, query = "") {
+  await page.goto(`./?task=grasp${query ? `&${query}` : ""}`);
+  await waitReady(page);
+  await page.getByRole("button", { name: "By hand" }).click();
+  await page.waitForFunction(() => window.__sim2browser.snapshot?.mode === "baseline");
+  await page.getByRole("button", { name: "Reset" }).click();
+  await page.waitForTimeout(300);
+}

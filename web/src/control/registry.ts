@@ -62,6 +62,8 @@ export interface ControllerDef {
   public: boolean;
   /** "reach" (default): follows the target. "grasp": picks up the cube; judged by the session. */
   task?: ControllerTask;
+  /** "engineered" (default) or "learned": the slot it fills in its task (Principle IV). */
+  kind?: "engineered" | "learned";
   /** Create at startup (must then be synchronous). Otherwise created on first selection. */
   preload?: boolean;
   /** Whether this build can offer it (e.g. a policy was exported). Default: yes. */
@@ -82,6 +84,8 @@ export const baseline: ControllerDef = {
 export const learned: ControllerDef = {
   id: "learned",
   label: "Learned",
+  short: "RL policy",
+  kind: "learned",
   description: "A PPO policy trained in the same simulation, rewarded for reaching smoothly.",
   public: true,
   available: (parity) => !!parity.policy,
@@ -93,7 +97,8 @@ export const learned: ControllerDef = {
 export const learnedGrasp: ControllerDef = {
   id: "learned-grasp",
   label: "Learned grasp",
-  short: "Learned",
+  short: "Imitation",
+  kind: "learned",
   description:
     "A policy learned by imitation from scripted and hand-recorded grasps (behavior cloning).",
   task: "grasp",

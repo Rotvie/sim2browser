@@ -12,6 +12,8 @@ export interface ObservePanel {
   update(step: PolicyStep | undefined, active: boolean): void;
   /** The panel element, or null while it is closed. */
   openElement(): HTMLElement | null;
+  /** Only where the current task has a learned policy (004); hiding also closes it. */
+  setAvailable(on: boolean): void;
 }
 
 export interface PolicyLayout {
@@ -135,6 +137,10 @@ export function createObservePanel(
 
   return {
     openElement: () => (panel.hidden ? null : panel),
+    setAvailable(on) {
+      button.hidden = !on;
+      if (!on) set(false);
+    },
     update(step, active) {
       if (panel.hidden) return;
       if (!step) {

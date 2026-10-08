@@ -14,7 +14,7 @@ test.describe("004 P1: recording mode @lg1", () => {
   test("records a scripted grasp, keeps it and saves a demonstration file", async ({ page }) => {
     test.setTimeout(90_000);
     const errors = collectConsoleErrors(page);
-    await page.goto("./?record");
+    await page.goto("./?record&task=grasp");
     await waitReady(page);
     const card = page.getByRole("region", { name: "Recording" });
     await expect(card).toContainText("next placement #0 (seed 2000)");

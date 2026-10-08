@@ -93,7 +93,8 @@ test("soak: random interaction stays healthy @soak", async ({ page }, info) => {
   while (Date.now() < end) {
     const r = rand();
     if (Date.now() > nextModeSwitch) {
-      const modeButtons = page.locator("[data-mode]");
+      // 004: a visible controller slot of the current task, or the other task's tab.
+      const modeButtons = page.locator('[data-mode]:visible, [role="tab"]');
       const n = await modeButtons.count();
       if (n > 0) await modeButtons.nth(Math.floor(rand() * n)).click();
       nextModeSwitch = Date.now() + 5000 + rand() * 15_000;

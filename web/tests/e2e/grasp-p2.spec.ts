@@ -1,5 +1,5 @@
 /** 002 P2: the scripted grasp (spec User Story 2, contracts/ui.md "Grasp status chip"). */
-import { collectConsoleErrors, dragCube, dragTarget, waitReady } from "./helpers";
+import { collectConsoleErrors, dragCube, dragTarget, openGraspByHand } from "./helpers";
 import { expect, test } from "./fixtures";
 
 const state = (page: import("@playwright/test").Page) =>
@@ -15,18 +15,17 @@ const state = (page: import("@playwright/test").Page) =>
 
 test.describe("002 P2: scripted grasp @g2", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("./");
-    await waitReady(page);
-    await page.waitForTimeout(300);
+    await openGraspByHand(page);
   });
 
   test("the mode switch offers Scripted grasp; it lifts the cube and says so", async ({ page }) => {
     test.setTimeout(60_000);
     const errors = collectConsoleErrors(page);
+    // 004: task first; the Grasp task offers By hand and the scripted grasp (+ learned if shipped).
     const modes = page.getByRole("group", { name: "Controller" }).getByRole("button");
-    // Grouped by task (004): Reach, then Grasp; inside a group the short name is shown.
-    await expect(modes).toHaveText(["Manual", "Baseline", "Learned", "Scripted"]);
-    await expect(page.getByRole("group", { name: "Grasp" })).toBeVisible();
+    await expect(modes.first()).toHaveAccessibleName("By hand");
+    await expect(modes.nth(1)).toHaveAccessibleName("Scripted grasp");
+    await expect(page.getByRole("tab", { name: "Grasp" })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     const chip = page.getByRole("status");
     await expect(chip).toContainText(/Approaching|Descending/, { timeout: 5000 });
@@ -44,7 +43,7 @@ test.describe("002 P2: scripted grasp @g2", () => {
     await expect(chip).toContainText("Lifted ✓", { timeout: 20_000 });
 
     await page.getByRole("button", { name: "Reset" }).click(); // cube back; a new attempt starts
-    await page.getByRole("button", { name: "Baseline" }).click();
+    await page.getByRole("button", { name: "By hand" }).click();
     await dragCube(page, 0.0, -0.36); // beyond the graspable region
     await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
     await expect(chip).toContainText("Failed: cube out of reach", { timeout: 5000 });
@@ -52,7 +51,9 @@ test.describe("002 P2: scripted grasp @g2", () => {
 
   // Data model: leaving the grasp keeps the gripper command. The grasp itself may still change
   // it before the drag reaches the worker (slow runners), so compare across the handover itself.
-  test("dragging the target mid-grasp hands over to the baseline, gripper unchanged", async ({
+  // 004: the target is hidden while a grasp controller runs (Grasp task); taking over by hand is
+  // the "By hand" slot, which then shows the target where the tip is.
+  test("taking over by hand mid-grasp hands over to the baseline, gripper unchanged", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Scripted grasp", exact: true }).click();
@@ -72,8 +73,9 @@ test.describe("002 P2: scripted grasp @g2", () => {
       };
       requestAnimationFrame(rec);
     });
-    await dragTarget(page, 40, -30);
+    await page.getByRole("button", { name: "By hand" }).click();
     await expect.poll(async () => (await state(page)).mode).toBe("baseline");
+    await dragTarget(page, 40, -30); // the target is back, at the tip, and drives the arm
     await page.waitForTimeout(1000);
     const h = await page.evaluate(
       () => (window as unknown as { __handover: { last?: string; first?: string } }).__handover,

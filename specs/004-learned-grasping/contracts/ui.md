@@ -2,18 +2,25 @@
 
 Spec US1–US3; research R7, R12. Builds on 002's `contracts/ui.md`.
 
-## Mode switch
+## Task and controller (2026-10-08, replaces the flat mode switch)
 
-- Grouped by task (2026-10-07): a "Reach" group (Manual · Baseline · Learned · lab reach
-  controllers) and a "Grasp" group (Scripted · Learned · lab grasp controllers), each a segmented
-  control with a small group label; the group comes from the registry's `task`, so a new
-  controller lands in its group without UI changes. Inside a group a button shows the registry's
-  `short` name ("Scripted"); its accessible name is the full label ("Scripted grasp") and its
-  tooltip the registry description. The 002 "Grasp" button is now "Scripted grasp" (id `grasp`).
-  On narrow screens each group is one row, wrapping if needed.
-- "Learned grasp" appears only if `parity.json` has `graspPolicy` (else the page is 002's).
-- Must fit a 360 px wide viewport without horizontal scroll (e2e check); if it does not, the two
-  grasp buttons shorten to "Grasp: script" / "Grasp: learned".
+- **Task tabs** under the title: Reach | Grasp (role `tablist`, name "Task"). A first visit opens
+  on Reach; `?task=grasp` opens Grasp. Choosing a tab selects that task's engineered controller
+  (Grasp: the scripted grasp starts).
+- **Slots** in the toolbar, only the current task's (group "Controller"): You · Engineered ·
+  Learned (· Lab with `?lab`). Each shows its role and a short name (registry `kind`, `public`,
+  `short`); its accessible name is the controller's full name, its tooltip the description.
+  - Reach: You = "Manual" (pose the joints), Engineered = Baseline, Learned = RL policy.
+  - Grasp: You = "By hand" (the Baseline follows the target, gripper by button or G),
+    Engineered = Scripted grasp, Learned = Learned grasp (only when a grasp policy is shipped).
+  - A new controller appears in its task from its registry entry alone.
+- **The scene follows the task**: the target is shown and draggable in Reach and in Grasp by hand
+  only (hidden while a grasp controller runs; taking over is the "By hand" slot, or a joint grab);
+  the gripper button (and key G) only in Grasp; "Policy view" only where the task has a learned
+  policy, showing that task's policy; the subtitle names the task.
+- When the worker changes mode itself (gripper press or joint grab during a grasp), the task stays
+  and the "You" slot lights up.
+- Narrow screens: tabs under the title, slots one row (two-line buttons).
 
 ## Grasp status card (002, extended)
 

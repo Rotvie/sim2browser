@@ -1,6 +1,5 @@
 /** The interactive app: rendering, input and UI. Loaded after the sim worker has started. */
 import * as THREE from "three";
-import { MANUAL } from "./control/modes";
 import type { FromWorker, ReadyInfo, Snapshot, ToWorker } from "./protocol";
 import { createArmView } from "./render/arm";
 import { PoseInterpolator } from "./render/interp";
@@ -13,7 +12,7 @@ import { createGripperButton, type GripperButton } from "./ui/gripperButton";
 import { createHint } from "./ui/hint";
 import { createInfoPanel } from "./ui/infoPanel";
 import type { Messages } from "./ui/messages";
-import { createModeSwitch, type ModeSwitch } from "./ui/modeSwitch";
+import { createTaskControls, TASKS, type TaskControls } from "./ui/taskControls";
 import { createObservePanel, type ObservePanel } from "./ui/panel";
 import { createRecordPanel, type RecordPanel } from "./ui/recordPanel";
 import { createResetButton } from "./ui/resetButton";
@@ -66,7 +65,11 @@ export function startApp({ worker, early, messages, init }: AppContext) {
   let ready: ReadyInfo | null = null;
   let arm: ReturnType<typeof createArmView> | null = null;
   let target: TargetView | null = null;
-  let modeSwitch: ModeSwitch | null = null;
+  let modeSwitch: TaskControls | null = null;
+  const subtitle = document.querySelector<HTMLElement>(".brand p");
+  const urlTask = new URLSearchParams(location.search).get("task") === "grasp" ? "grasp" : "reach";
+  let reachObs = 0;
+  let graspObs = 0;
   let observe: ObservePanel | null = null;
   let gripperButton: GripperButton | null = null;
   const graspStatus = createGraspStatus(
@@ -80,6 +83,18 @@ export function startApp({ worker, early, messages, init }: AppContext) {
     : null;
   /** Modes the worker has run at least once (already created: no loading spinner). */
   const used = new Set<string>();
+
+  /** The page follows the task: subtitle, gripper button (Grasp only). */
+  /** Tasks whose learned controller this build ships. */
+  const learnedIn = new Set<string>();
+  const applyTask = (task: "reach" | "grasp") => {
+    if (subtitle)
+      subtitle.textContent = TASKS.find((t) => t.id === task)!.subtitle(learnedIn.has(task));
+    gripperButton?.setVisible(task === "grasp");
+    observe?.setAvailable(learnedIn.has(task));
+  };
+  const size = (fields: { size: number }[] | null) =>
+    (fields ?? []).reduce((n, f) => n + f.size, 0);
 
   const bodyIndex = (name: string) => ready?.bodyNames.indexOf(name) ?? -1;
   const bodyPos = (b: number): THREE.Vector3 | null =>
@@ -147,27 +162,25 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         // Public controllers always; lab controllers (registry `public: false`) with ?lab.
         const lab = new URLSearchParams(location.search).has("lab");
         const shown = msg.controllers.filter((c) => c.public || lab);
-        modeSwitch = createModeSwitch(
+        modeSwitch = createTaskControls({
+          tabsRoot: app.querySelector(".brand")!,
           toolbar,
-          [
-            {
-              id: MANUAL,
-              label: "Manual",
-              task: "reach",
-              description: "No controller: drag the arm's joints to pose it.",
-            },
-            ...shown,
-          ],
-          (mode) => {
+          controllers: shown,
+          initialTask: urlTask,
+          onSelect: (mode) => {
             // Controllers are created on first use; show a spinner until the worker confirms.
             if (mode !== latest?.mode && !used.has(mode)) modeSwitch?.setState(mode, "loading");
             send({ type: "setMode", mode });
           },
-        );
+          onTask: (task) => applyTask(task),
+        });
         gripperButton = createGripperButton(toolbar, (command) => {
           cubeHint.dismiss();
           send({ type: "setGripper", command });
         });
+        for (const c of shown) if (c.kind === "learned") learnedIn.add(c.task);
+        reachObs = size(msg.observation);
+        graspObs = size(msg.graspObservation);
         const hasPolicy = shown.some((c) => c.id === "learned");
         const hasGraspPolicy = shown.some((c) => c.id === "learned-grasp") && msg.graspObservation;
         const layouts = [
@@ -191,6 +204,11 @@ export function startApp({ worker, early, messages, init }: AppContext) {
             : []),
         ];
         if (layouts.length) observe = createObservePanel(app, toolbar, layouts);
+        applyTask(modeSwitch.task);
+        // A ?task=grasp link opens grasping on its engineered controller.
+        if (modeSwitch.task === "grasp" && msg.controllers.some((c) => c.id === "grasp"))
+          send({ type: "setMode", mode: "grasp" });
+
         createInfoPanel(
           app,
           toolbar,
@@ -251,15 +269,27 @@ export function startApp({ worker, early, messages, init }: AppContext) {
     stats.frame(now);
     const pose = interp.sample(now);
     if (arm && pose) arm.setPose(pose);
+    const task = modeSwitch?.task ?? "reach";
+    const byHand = modeSwitch?.byHand() ?? false;
+    // The target is the Reach task's, and the handle for grasping by hand.
+    target?.setEnabled(task === "reach" || byHand);
     target?.update();
-    if (latest) observe?.update(latest.policyStep, latest.policyStepActive);
+    if (latest) {
+      // The policy view shows the current task's policy (or says how to load it).
+      const step = latest.policyStep;
+      const want = task === "grasp" ? graspObs : reachObs;
+      const mine = step && step.obsRaw.length === want ? step : undefined;
+      observe?.update(mine, !!mine && latest.policyStepActive);
+    }
     // On narrow screens the policy panel is a bottom sheet: keep the arm above it.
     const sheet = window.innerWidth < 700 ? observe?.openElement() : null;
     view.setBottomInset(sheet ? canvas.clientHeight - sheet.getBoundingClientRect().top : 0);
-    hint.place(target?.screenPoint() ?? null);
+    hint.place(task === "reach" ? (target?.screenPoint() ?? null) : null);
     const cubeAt = latest?.cube.pos;
     cubeHint.place(
-      !hint.active && cubeAt ? toScreen(new THREE.Vector3(cubeAt[0], cubeAt[1], cubeAt[2])) : null,
+      task === "grasp" && byHand && cubeAt
+        ? toScreen(new THREE.Vector3(cubeAt[0], cubeAt[1], cubeAt[2]))
+        : null,
     );
     view.render();
     requestAnimationFrame(loop);

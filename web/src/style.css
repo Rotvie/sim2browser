@@ -572,48 +572,68 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* 004: controllers grouped by task (modeSwitch.ts). */
-.modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  align-items: center;
+/* 004: task tabs (under the title) and the task's controller slots (taskControls.ts). */
+.task-tabs {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(29, 35, 43, 0.06);
+  pointer-events: auto;
 }
 
-.mode-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.task-tabs button {
+  min-height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.mode-group-label {
-  font-size: 11px;
+.task-tabs button[aria-selected="true"] {
+  background: #ffffff;
+  color: var(--fg);
+  box-shadow: 0 1px 2px rgba(29, 35, 43, 0.15);
+}
+
+.task-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.segmented .slot {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  line-height: 1.15;
+  min-height: 44px;
+}
+
+.segmented .slot[hidden] {
+  display: none;
+}
+
+.slot-role {
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-@media (max-width: 520px) {
-  .modes {
-    width: 100%;
-  }
-  .mode-group {
-    width: 100%;
-  }
-  .mode-group-label {
-    width: 44px;
-    flex: none;
-  }
-  .mode-group .segmented {
-    flex: 1;
-    flex-wrap: wrap;
-  }
-  .mode-group .segmented button {
-    flex: 1 1 auto;
-    padding: 0 8px;
-    white-space: nowrap;
-  }
+.slot[data-role="learned"] .slot-role {
+  color: var(--accent);
+}
+
+.slot-name {
+  font-size: 14px;
 }
 
 /* 004: grasp comparison in the info panel. */

@@ -33,9 +33,12 @@ export interface TargetView {
   /** Per frame: sync with the latest snapshot and place the label. */
   update(): void;
   screenPoint(): [number, number] | null;
+  /** Shown and draggable only when the task uses it (004: Reach, or grasping by hand). */
+  setEnabled(on: boolean): void;
 }
 
 export function createTargetView(o: TargetViewOptions): TargetView {
+  let enabled = true;
   const group = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({
     color: COLOR_OK,
@@ -216,8 +219,11 @@ export function createTargetView(o: TargetViewOptions): TargetView {
   };
 
   return {
+    setEnabled(on) {
+      enabled = on;
+    },
     update() {
-      const s = o.latest();
+      const s = enabled ? o.latest() : null;
       group.visible = !!s;
       stem.visible = dot.visible = !!s;
       if (!s) {

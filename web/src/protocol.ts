@@ -65,6 +65,7 @@ export interface ReadyInfo {
     description: string;
     public: boolean;
     task: import("./control/registry").ControllerTask;
+    kind: "engineered" | "learned";
   }[];
   /** Baseline design parameters, shown in the info panel (parity.json `baseline`). */
   baseline: import("./sim/parity").Parity["baseline"];
