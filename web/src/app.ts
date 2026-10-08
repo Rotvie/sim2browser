@@ -163,7 +163,6 @@ export function startApp({ worker, early, messages, init }: AppContext) {
         const lab = new URLSearchParams(location.search).has("lab");
         const shown = msg.controllers.filter((c) => c.public || lab);
         modeSwitch = createTaskControls({
-          tabsRoot: app.querySelector(".brand")!,
           toolbar,
           controllers: shown,
           initialTask: urlTask,
@@ -190,6 +189,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
                   fields: msg.observation,
                   outputs: msg.policyJoints.map((j) => j.replace("_", " ")),
                   joints: msg.policyJoints,
+                  title: `What the ${shown.find((c) => c.id === "learned")!.short} policy sees`,
                 },
               ]
             : []),
@@ -199,6 +199,7 @@ export function startApp({ worker, early, messages, init }: AppContext) {
                   fields: msg.graspObservation!,
                   outputs: [...msg.joints.map((j) => j.replace("_", " ")), "Gripper (> 0 closes)"],
                   joints: msg.joints,
+                  title: `What the ${shown.find((c) => c.id === "learned-grasp")!.short} policy sees`,
                 },
               ]
             : []),

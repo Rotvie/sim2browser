@@ -27,6 +27,8 @@ export interface PolicyLayout {
   outputs: string[];
   /** Joint names for per-joint observation fields. */
   joints: string[];
+  /** The panel title while this policy is shown, e.g. "What the PPO policy sees". */
+  title: string;
 }
 
 const axis = ["x", "y", "z"];
@@ -105,6 +107,7 @@ export function createObservePanel(
   panel.setAttribute("aria-label", "What the policy sees");
   const head = document.createElement("header");
   head.innerHTML = `<h2>What the policy sees</h2><button type="button" class="close" aria-label="Close">×</button>`;
+  const heading = head.querySelector("h2")!;
   const status = document.createElement("p");
   status.className = "note";
   const normToggle = document.createElement("button");
@@ -189,6 +192,7 @@ export function createObservePanel(
       views.forEach((v, i) => (v.el.hidden = timelineView || i !== which));
       timelines.forEach((tl, i) => (tl.el.hidden = !timelineView || i !== which));
       if (which < 0) return;
+      heading.textContent = layouts[which].title;
       if (timelineView) {
         timelines[which].draw(showNorm);
         return;

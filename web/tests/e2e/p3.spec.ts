@@ -122,7 +122,7 @@ test.describe("P3: learned policy vs. baseline @p3", () => {
   test("the info panel shows the measured results", async ({ page }) => {
     await page.getByRole("button", { name: "About the controllers" }).click();
     const panel = page.getByRole("region", { name: "About the controllers" });
-    await expect(panel).toContainText("Learned policy");
+    await expect(panel).toContainText("learned: PPO");
     await expect(panel).toContainText("Measured results");
     await expect(panel).toContainText("Reached target");
     await expect(panel).toContainText("Tip jerk vs baseline");

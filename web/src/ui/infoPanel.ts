@@ -28,7 +28,7 @@ export function createInfoPanel(
   policyHeaderUrl: string | null,
   labControllers: { label: string; description: string }[] = [],
   /** Grasp controllers on the page, in mode-switch order. */
-  grasps: { id: string; label: string; public: boolean }[] = [],
+  grasps: { id: string; label: string; short: string; public: boolean }[] = [],
   sharedUrl: (path: string) => string = (p) => p,
 ): void {
   const button = document.createElement("button");
@@ -49,7 +49,7 @@ export function createInfoPanel(
       <h2>About the controllers</h2>
       <button type="button" class="close" aria-label="Close">×</button>
     </header>
-    <h3>Baseline design</h3>
+    <h3>Reach · engineered: DLS IK (the baseline)</h3>
     <p>Damped least-squares inverse kinematics on the tip position: every 20 ms it measures how far
       the tip is from the target and turns the joints to shrink that error.</p>
     <p>Tracks the target directly, with no trajectory planning.</p>
@@ -104,7 +104,7 @@ export function createInfoPanel(
             within 2 s. Numbers are shown as measured, including any shortfall.</p>`
         : `<p class="note">Not measured yet.</p>`;
       learnedInfo.innerHTML = `
-        <h3>Learned policy</h3>
+        <h3>Reach · learned: PPO (the learned policy)</h3>
         <p>A neural network (${h.layers.length - 1} hidden layers of ${h.layers[0].out}) trained with
           PPO reinforcement learning in the same simulation. Every 20 ms it sees
           ${observed.join(", ").toLowerCase()} and outputs a change for each joint target. It
@@ -148,7 +148,7 @@ export function createInfoPanel(
       try {
         const h = (await (await fetch(sharedUrl("policy/grasp.json"))).json()) as PolicyHeader;
         const d = h.trainedWith.demos;
-        learned = `<p><strong>Learned grasp</strong>: a neural network that imitates grasps instead
+        learned = `<p><strong>Learned: BC + DAgger</strong> (the learned grasp): a neural network that imitates grasps instead
           of following a script${
             d
               ? `: trained on ${d.scripted} generated and ${d.hand} hand-recorded demonstrations
@@ -165,8 +165,8 @@ export function createInfoPanel(
     }
     const n = rows[0]!.r.n;
     graspInfo.innerHTML = `
-      <h3>Grasping the cube</h3>
-      <p><strong>Scripted grasp</strong>: no learning. A script built on the baseline moves
+      <h3>Grasp: picking up the cube</h3>
+      <p><strong>Engineered: top-down script</strong> (the scripted grasp): no learning. A script built on the baseline moves
         above the cube with the jaws pointing down and turned to match the cube, descends, closes
         the gripper and lifts. Only one jaw moves, so it comes down a little to one side of the
         cube. It reports a failure instead of pretending.</p>
@@ -179,7 +179,7 @@ export function createInfoPanel(
             const target = c.id === "grasp" ? 0.9 : c.id === "learned-grasp" ? 0.8 : null;
             const cls = target === null ? "" : r.successRate >= target ? "ok" : "miss";
             return `<tr data-controller="${c.id}">
-              <th scope="row">${c.label}${c.public ? "" : ` <span class="tag">lab</span>`}</th>
+              <th scope="row">${c.short}<br><span class="sub">${c.label}</span>${c.public ? "" : ` <span class="tag">lab</span>`}</th>
               <td class="${cls}">${pct(r.successRate)}</td>
               <td>${r.medianTimeToLift === null ? "–" : `${r.medianTimeToLift.toFixed(1)} s`}</td>
               <td>${failures.length ? failures.map(([k, v]) => `${v} ${FAILURE_WORDS[k] ?? k}`).join(", ") : "none"}</td>

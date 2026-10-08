@@ -573,9 +573,15 @@ body {
 }
 
 /* 004: task tabs (under the title) and the task's controller slots (taskControls.ts). */
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .task-tabs {
   display: inline-flex;
-  margin-top: 8px;
   padding: 3px;
   gap: 2px;
   border-radius: 10px;
@@ -875,4 +881,31 @@ body {
   .tl-plot canvas {
     height: 48px;
   }
+}
+
+/* The task switch and its controllers read as one control: Reach | Grasp, then the slots. */
+.task-tabs button {
+  min-height: 44px;
+}
+
+@media (max-width: 520px) {
+  .picker {
+    width: 100%;
+  }
+  .picker .task-tabs {
+    width: 100%;
+  }
+  .picker .task-tabs button {
+    flex: 1;
+    min-height: 36px;
+  }
+  .picker .slots {
+    width: 100%;
+  }
+}
+
+.grasp-table th .sub {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
 }

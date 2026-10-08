@@ -4,15 +4,19 @@ Spec US1–US3; research R7, R12. Builds on 002's `contracts/ui.md`.
 
 ## Task and controller (2026-10-08, replaces the flat mode switch)
 
-- **Task tabs** under the title: Reach | Grasp (role `tablist`, name "Task"). A first visit opens
+- **One control cluster** at the bottom (2026-10-08): the task switch Reach | Grasp (role
+  `tablist`, name "Task") directly before its controller slots, then the actions. A first visit opens
   on Reach; `?task=grasp` opens Grasp. Choosing a tab selects that task's engineered controller
   (Grasp: the scripted grasp starts).
 - **Slots** in the toolbar, only the current task's (group "Controller"): You · Engineered ·
   Learned (· Lab with `?lab`). Each shows its role and a short name (registry `kind`, `public`,
   `short`); its accessible name is the controller's full name, its tooltip the description.
-  - Reach: You = "Manual" (pose the joints), Engineered = Baseline, Learned = RL policy.
-  - Grasp: You = "By hand" (the Baseline follows the target, gripper by button or G),
-    Engineered = Scripted grasp, Learned = Learned grasp (only when a grasp policy is shipped).
+  - Buttons name the algorithm (registry `short`); the accessible name stays the role name.
+  - Reach: You = "Manual" (pose joints), Engineered = DLS IK (Baseline), Learned = PPO.
+  - Grasp: You = "By hand" (DLS IK follows the target, gripper by button or G), Engineered =
+    Top-down script (Scripted grasp), Learned = BC + DAgger (Learned grasp, only when shipped).
+  - Lab: Jacobian transpose (reach); Naive top-down, Reactive script (grasp).
+  - Policy view and info panel use the same names ("What the PPO policy sees").
   - A new controller appears in its task from its registry entry alone.
 - **The scene follows the task**: the target is shown and draggable in Reach and in Grasp by hand
   only (hidden while a grasp controller runs; taking over is the "By hand" slot, or a joint grab);

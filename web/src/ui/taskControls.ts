@@ -68,7 +68,6 @@ export interface TaskControls {
 }
 
 export function createTaskControls(opts: {
-  tabsRoot: HTMLElement;
   toolbar: HTMLElement;
   controllers: ControllerInfo[];
   initialTask: ControllerTask;
@@ -120,7 +119,6 @@ export function createTaskControls(opts: {
     tabButtons.set(t.id, b);
     tabs.appendChild(b);
   }
-  opts.tabsRoot.appendChild(tabs);
 
   // Slots, one segmented control (only the current task's slots are shown).
   const root = document.createElement("div");
@@ -144,7 +142,11 @@ export function createTaskControls(opts: {
     buttons.set(s.key, b);
     root.appendChild(b);
   }
-  opts.toolbar.prepend(root);
+  // One cluster: the task, then who does it (the actions follow in the toolbar).
+  const picker = document.createElement("div");
+  picker.className = "picker";
+  picker.append(tabs, root);
+  opts.toolbar.prepend(picker);
 
   let task: ControllerTask = tasks.some((t) => t.id === opts.initialTask)
     ? opts.initialTask

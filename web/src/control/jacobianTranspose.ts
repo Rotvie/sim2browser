@@ -15,6 +15,7 @@ import type { ControllerDef } from "./registry";
 export const jacobianTranspose: ControllerDef = {
   id: "jacobian-transpose",
   label: "Jacobian T",
+  short: "Jacobian transpose",
   description:
     "Example plug-in: Jacobian-transpose reaching (Δq = α·Jᵀe with an adaptive step). No matrix inverse; less precise than the baseline.",
   public: false,

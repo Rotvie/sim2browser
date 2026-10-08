@@ -74,6 +74,7 @@ export interface ControllerDef {
 export const baseline: ControllerDef = {
   id: "baseline",
   label: "Baseline",
+  short: "DLS IK",
   description:
     "Damped least-squares inverse kinematics: a classical reactive controller with no learning.",
   public: true,
@@ -84,7 +85,7 @@ export const baseline: ControllerDef = {
 export const learned: ControllerDef = {
   id: "learned",
   label: "Learned",
-  short: "RL policy",
+  short: "PPO",
   kind: "learned",
   description: "A PPO policy trained in the same simulation, rewarded for reaching smoothly.",
   public: true,
@@ -97,10 +98,10 @@ export const learned: ControllerDef = {
 export const learnedGrasp: ControllerDef = {
   id: "learned-grasp",
   label: "Learned grasp",
-  short: "Imitation",
+  short: "BC + DAgger",
   kind: "learned",
   description:
-    "A policy learned by imitation from scripted and hand-recorded grasps (behavior cloning).",
+    "A neural network trained by behavior cloning on generated and hand-recorded grasps, then by DAgger (its own attempts, corrected by an expert).",
   task: "grasp",
   public: true,
   available: (parity) => !!parity.graspPolicy,
@@ -119,7 +120,7 @@ export const learnedGrasp: ControllerDef = {
 export const grasp: ControllerDef = {
   id: "grasp",
   label: "Scripted grasp",
-  short: "Scripted",
+  short: "Top-down script",
   task: "grasp",
   description:
     "Scripted top-down grasp built on the baseline: approach, descend, close, lift. No learning.",
